@@ -4,15 +4,15 @@
       <div class="card-content">
         <div class="header" style="margin-bottom: 20px">
           <h3>{{ isEdit ? '编辑队员' : '新增队员' }}</h3>
-          <button
-            v-if="!isEdit && isAdmin"
-            class="btn-modern primary"
-            style="margin-left: auto"
-            type="button"
-            @click="showBulkDialog = true"
-          >
-            批量新增
-          </button>
+          <div v-if="!isEdit && isAdmin" class="actions">
+            <button
+              class="btn-modern primary sm-btn bulk-create-button"
+              type="button"
+              @click="showBulkDialog = true"
+            >
+              批量新增
+            </button>
+          </div>
         </div>
         <el-form
           ref="formRef"
@@ -856,6 +856,29 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h3 {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bulk-create-button {
+  min-width: 72px;
+  white-space: nowrap;
+}
+
 /* 下拉框宽度优化，保持与 Profile 一致 */
 ::deep(.wide-select-dropdown) {
   .el-select-dropdown__item {
