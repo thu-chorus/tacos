@@ -127,9 +127,7 @@ class MemberSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(required=False, allow_blank=True)
     voice_part = serializers.CharField(required=False, allow_blank=True)
     wechat_id = serializers.CharField(required=False, allow_blank=True)
-    status = serializers.ChoiceField(
-        choices=MemberStatus.choices, required=False, default=MemberStatus.ACTIVE
-    )
+    status = serializers.ChoiceField(choices=MemberStatus.choices, required=False)
 
     department = serializers.CharField(required=False, allow_blank=True)
     department_other = serializers.CharField(required=False, allow_blank=True)
@@ -386,8 +384,15 @@ class MemberSerializer(serializers.ModelSerializer):
         actor_is_admin = bool(
             getattr(actor, "is_staff", False) or actor_role in ("Admin", "SuperAdmin")
         )
-        if "status" in validated_data and not actor_is_admin:
-            raise serializers.ValidationError({"status": "仅管理员可修改成员状态"})
+        if not actor_is_admin:
+            admin_only_fields = {
+                "status": "仅管理员可修改成员状态",
+                "tier": "仅管理员可修改成员梯队",
+            }
+            for field, message in admin_only_fields.items():
+                new_value = validated_data.get(field)
+                if field in validated_data and new_value != getattr(instance, field):
+                    raise serializers.ValidationError({field: message})
         if (
             not actor_is_admin
             and "graduate_month" in (self.initial_data or {})
