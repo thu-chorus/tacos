@@ -2,7 +2,7 @@ const state = {
   // 系统配置
   config: {
     title: 'TaCOS - 清华合唱队在线系统',
-    version: '2.1.0'
+    version: import.meta.env.VITE_APP_VERSION || '0.0.0'
   },
 
   // 分享功能状态

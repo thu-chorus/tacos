@@ -1,7 +1,14 @@
 <template>
   <aside class="sidebar" :class="{ open: isOpen, collapsed: !isOpen }" :aria-hidden="!isOpen">
     <div class="brand">
-      <div class="brand-text">TaCOS 2.0</div>
+      <RouterLink class="brand-main" to="/dashboard" aria-label="TaCOS 主页">
+        <img class="brand-logo" src="/icon.png" alt="" aria-hidden="true" />
+        <span class="brand-copy">
+          <span class="brand-name">TaCOS</span>
+          <span class="brand-subtitle">清华合唱</span>
+        </span>
+        <span class="brand-version">v{{ appVersion }}</span>
+      </RouterLink>
       <button
         v-if="isOpen"
         class="btn-modern ghost toggle-btn-in-sidebar"
@@ -145,6 +152,7 @@ export default {
       () => store.getters['auth/isAdmin'] || store.getters['auth/isSuperAdmin']
     )
     const user = computed(() => store.getters['auth/user'])
+    const appVersion = computed(() => store.getters['common/config']?.version || '')
 
     const isActive = pathPrefix => {
       return route.path === pathPrefix || route.path.startsWith(`${pathPrefix}/`)
@@ -219,7 +227,14 @@ export default {
       loadMyOngoing()
     })
 
-    return { isAdmin, isActive, handleLogout, myOngoingEvents, handleOpenPasteDialog }
+    return {
+      isAdmin,
+      appVersion,
+      isActive,
+      handleLogout,
+      myOngoingEvents,
+      handleOpenPasteDialog
+    }
   }
 }
 </script>
@@ -254,26 +269,58 @@ export default {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  height: 50px;
-  padding: 0 12px;
-  margin-bottom: 10px;
+  min-height: 58px;
+  padding: 10px 12px 8px;
+  margin-bottom: 8px;
 }
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
-  box-shadow: 0 4px 14px rgba(154, 86, 181, 0.25);
-}
-.brand-text {
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--brand-700);
-  letter-spacing: 0.3px;
-  padding: 12px;
-  transition: opacity 0.12s ease;
+.brand-main {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   flex: 1;
-  margin-top: 25px;
+  color: inherit;
+  text-decoration: none;
+}
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+.brand-name {
+  overflow: hidden;
+  color: var(--brand-700);
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 21px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brand-subtitle {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brand-version {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
 }
 .toggle-btn-in-sidebar {
   padding: 6px 8px;
@@ -337,16 +384,27 @@ export default {
   border-color: var(--border);
   color: #111827;
 }
-.nav-item:focus,
+.brand-main:focus:not(:focus-visible),
+.nav-item:focus:not(:focus-visible),
+.sub-nav-item:focus:not(:focus-visible),
+.toggle-btn-in-sidebar:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.brand-main:focus-visible,
 .nav-item:focus-visible {
   outline: 2px solid var(--brand-500);
   outline-offset: 2px;
   box-shadow: none;
 }
-.sub-nav-item:focus,
 .sub-nav-item:focus-visible {
   outline: 1px solid var(--brand-500);
   outline-offset: 1px;
+  box-shadow: none;
+}
+.toggle-btn-in-sidebar:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
   box-shadow: none;
 }
 .nav-item span {
@@ -380,7 +438,8 @@ export default {
   color: #7f1d1d;
 }
 
-.sidebar.collapsed .brand-text,
+.sidebar.collapsed .brand-copy,
+.sidebar.collapsed .brand-version,
 .sidebar.collapsed .nav-item span {
   opacity: 0;
 }

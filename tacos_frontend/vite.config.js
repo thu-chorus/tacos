@@ -1,10 +1,16 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+
 // Vite 配置文档：https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version)
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')
@@ -13,7 +19,8 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: '@use \'src/assets/styles/variables.scss\' as *; @use \'src/assets/styles/mixins.scss\' as *;'
+        additionalData:
+          '@use \'src/assets/styles/variables.scss\' as *; @use \'src/assets/styles/mixins.scss\' as *;'
       }
     }
   },
@@ -36,7 +43,7 @@ export default defineConfig({
       output: {
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',
-        assetFileNames: (assetInfo) => {
+        assetFileNames: assetInfo => {
           // 保持 favicon.ico 和 icon.png 在根目录，不添加 hash
           if (assetInfo.name === 'favicon.ico' || assetInfo.name === 'icon.png') {
             return '[name].[ext]'
