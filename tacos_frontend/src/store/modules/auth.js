@@ -31,11 +31,16 @@ const actions = {
   // 用户登录
   async login({ commit }, loginForm) {
     const response = await login(loginForm)
-    const { token, refresh_token, user } = response.data
+    const { token, refresh_token, user, is_first_login, needs_profile_setup } = response.data
+    const currentUser = {
+      ...user,
+      is_first_login: !!(is_first_login ?? user?.is_first_login),
+      needs_profile_setup: !!(needs_profile_setup ?? user?.needs_profile_setup)
+    }
 
     commit('SET_TOKEN', token)
-    commit('SET_USER', user)
-    commit('SET_ROLES', [user.role])
+    commit('SET_USER', currentUser)
+    commit('SET_ROLES', [currentUser.role])
 
     setToken(token)
     if (refresh_token) {
@@ -48,12 +53,17 @@ const actions = {
   // 获取用户信息
   async getUserInfo({ commit }) {
     const response = await getUserInfo()
-    const user = response.data
+    const user = response.data || {}
+    const currentUser = {
+      ...user,
+      is_first_login: !!user?.is_first_login,
+      needs_profile_setup: !!user?.needs_profile_setup
+    }
 
-    commit('SET_USER', user)
-    commit('SET_ROLES', [user.role])
+    commit('SET_USER', currentUser)
+    commit('SET_ROLES', [currentUser.role])
 
-    return user
+    return currentUser
   },
 
   // 用户登出

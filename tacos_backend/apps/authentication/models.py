@@ -53,7 +53,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         max_length=16, choices=UserRole.choices, default=UserRole.MEMBER
     )
 
-    is_active = models.BooleanField(default=True)
+    # 平台级账号开关；成员在队、校友、停用状态由 Member.status 表示。
+    is_active = models.BooleanField(
+        "账号启用",
+        default=True,
+        help_text="仅用于平台级账号禁用；成员在队、校友、停用请维护成员状态。",
+    )
     is_staff = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(default=timezone.now)

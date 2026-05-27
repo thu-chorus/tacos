@@ -36,12 +36,13 @@ router.beforeEach(async (to, from, next) => {
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
 
-    // 全局首次登录强制跳转：已登录且标记为首次登录，则统一跳转到 /first-login
+    // 全局首次登录和成员档案补全强制跳转到 /first-login
     // 避免与登录页、首次登录页自身相互跳转造成循环
     if (
       store.getters['auth/isLoggedIn'] &&
       store.getters['auth/user'] &&
-      store.getters['auth/user'].is_first_login &&
+      (store.getters['auth/user'].is_first_login ||
+        store.getters['auth/user'].needs_profile_setup) &&
       to.name !== 'FirstLogin' &&
       to.name !== 'Login'
     ) {
