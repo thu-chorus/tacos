@@ -123,10 +123,18 @@ class EventBasicApiTest(TestCase):
         self.assertEqual(res_detail3.json()["data"].get("is_participant"), True)
 
     def test_is_participant_for_admin_only(self):
-        """活动管理员未加入参与者列表时，is_participant 为 False。"""
+        """活动管理员未加入参与者列表时可自行报名。"""
         self._auth("m10001", "Pass1001")
         res_detail = self.client.get(f"/api/v1/events/{self.event_id}/")
         self.assertEqual(res_detail.status_code, 200, res_detail.json())
         data = res_detail.json()["data"]
         self.assertEqual(data.get("relation"), "event_admin")
         self.assertEqual(data.get("is_participant"), False)
+
+        res_join = self.client.post(f"/api/v1/events/{self.event_id}/join/")
+        self.assertEqual(res_join.status_code, 200, res_join.json())
+        res_detail_after_join = self.client.get(f"/api/v1/events/{self.event_id}/")
+        self.assertEqual(res_detail_after_join.status_code, 200)
+        data_after_join = res_detail_after_join.json()["data"]
+        self.assertEqual(data_after_join.get("relation"), "event_admin")
+        self.assertEqual(data_after_join.get("is_participant"), True)

@@ -1089,8 +1089,11 @@ export default {
 
     const canEdit = computed(() => isAdmin.value || event.value?.relation === 'event_admin')
     const canJoin = computed(() => {
-      if (!user.value || (event.value?.relation && event.value?.relation !== 'not_member')) {
+      if (!user.value || event.value?.is_participant) {
         return false
+      }
+      if (event.value?.relation === 'event_admin') {
+        return true
       }
       if (myStatus.value === 'ALUMNI') {
         return event.value?.visible_to_alumni === true
