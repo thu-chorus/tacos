@@ -212,6 +212,9 @@ class EventViewSet(EnvelopeModelViewSet):
             )
         if event.participants.filter(pk=member.id).exists():
             return Response({"joined": True})
+        if event.admins.filter(pk=member.id).exists():
+            event.participants.add(member)
+            return Response({"joined": True})
         if getattr(member, "status", MemberStatus.ACTIVE) == MemberStatus.ALUMNI:
             if event.visible_to_alumni:
                 event.participants.add(member)
