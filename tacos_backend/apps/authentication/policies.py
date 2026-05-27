@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from django.conf import settings
+
 from apps.personnel.models import MemberStatus
 
 
@@ -29,3 +31,14 @@ def get_login_block_reason(user) -> Optional[LoginBlockReason]:
         )
 
     return None
+
+
+def user_needs_profile_setup(user) -> bool:
+    """所有账号都必须关联成员档案。"""
+    return getattr(user, "member", None) is None
+
+
+def user_is_first_login(user) -> bool:
+    """按默认初始密码判断是否仍处于首次登录状态。"""
+    default_password = getattr(settings, "DEFAULT_INITIAL_PASSWORD", "ChangeMe123!")
+    return bool(default_password and user.check_password(default_password))

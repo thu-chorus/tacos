@@ -122,6 +122,7 @@ tacos_backend/
 - Celery Beat 每天会将超过 6 个月未登录的 `ACTIVE` 成员设为 `INACTIVE`，不会修改 `ALUMNI`。
 - `INACTIVE` 成员登录时会被拒绝，并提示“账号已停用，请联系管理员协助处理”。
 - `User.is_active` 仅作为平台级账号开关；成员生命周期状态以 `Member.status` 为准。
+- 任意账号若还没有成员档案，登录后会进入首次信息完善流程；管理员权限由 `User.role` 控制。
 - 校友可查看并报名显式设置 `visible_to_alumni=true` 的活动，也可查看显式校友可见的乐谱，以及校友可见活动关联的乐谱。
 - 校友不能担任 `visible_to_alumni=false` 活动的活动管理员。
 

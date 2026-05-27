@@ -98,7 +98,8 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 python manage.py createsuperuser
 ```
 
-然后访问 Django Admin 后台进行用户管理。
+然后访问 Django Admin 后台进行用户管理。管理员账号仍然需要成员档案；若只在
+Django Admin 创建了用户，首次登录后会进入个人信息完善流程。
 
 详细的脚本使用说明请参考 [scripts/README.md](scripts/README.md)。
 
@@ -122,6 +123,7 @@ TaCOS 2.1 增加了轻量校友系统：
 - `Member.status` 是成员在队、校友、停用状态的来源，`User.is_active` 仅作为平台级账号开关。
 - Celery Beat 每天将超过 6 个月未登录的 `ACTIVE` 成员设为 `INACTIVE`，不会修改 `ALUMNI`。
 - `INACTIVE` 成员登录时会被拒绝，并提示“账号已停用，请联系管理员协助处理”。
+- 任意账号若还没有成员档案，登录后会进入首次信息完善流程；管理员权限由 `User.role` 控制。
 
 ## 日常维护
 

@@ -8,12 +8,17 @@
             <div class="name">{{ profileForm.name || '未命名' }}</div>
             <div class="tags">
               <el-tag type="info">{{ profileForm.user_id }}</el-tag>
-              <el-tag :type="getVoicePartType(profileForm.voice_part)">{{
-                profileForm.voice_part || 'Other'
-              }}</el-tag>
-              <el-tag :type="profileForm.tier === '一队' ? 'danger' : 'primary'">{{
-                profileForm.tier || '二队'
-              }}</el-tag>
+              <el-tag v-if="profileForm.role" type="success">{{ roleDisplayName }}</el-tag>
+              <el-tag
+                v-if="profileForm.voice_part"
+                :type="getVoicePartType(profileForm.voice_part)"
+                >{{ profileForm.voice_part || 'Other' }}</el-tag
+              >
+              <el-tag
+                v-if="profileForm.tier"
+                :type="profileForm.tier === '一队' ? 'danger' : 'primary'"
+                >{{ profileForm.tier || '二队' }}</el-tag
+              >
               <el-tag v-if="profileForm.status === 'ALUMNI'" type="warning">校友</el-tag>
             </div>
             <div class="signature-box">
@@ -45,10 +50,20 @@
         <div class="header" style="margin-bottom: 20px">
           <h3>个人信息</h3>
           <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="goEdit">编辑个人信息</button>
+            <button class="btn-modern primary sm-btn" @click="goEdit">
+              {{ profileActionText }}
+            </button>
           </div>
         </div>
         <div class="info-grid">
+          <div v-if="profileForm.role" class="info-item">
+            <div class="label">账号角色</div>
+            <div class="value">{{ roleDisplayName }}</div>
+          </div>
+          <div v-if="!hasMemberProfile" class="info-item">
+            <div class="label">成员档案</div>
+            <div class="value">待完善</div>
+          </div>
           <div v-if="profileForm.wechat_id" class="info-item">
             <div class="label">微信号</div>
             <div class="value">{{ profileForm.wechat_id }}</div>
@@ -258,7 +273,7 @@
       </template>
     </el-dialog>
 
-    <div v-if="hiddenFields.length > 0" class="card">
+    <div v-if="hasMemberProfile && hiddenFields.length > 0" class="card">
       <div class="card-content">
         <div class="header" style="margin-bottom: 8px">
           <h3>已隐藏的信息</h3>
@@ -288,7 +303,7 @@
         </div>
       </div>
       <div
-        v-if="hiddenFields.length === 0"
+        v-if="hasMemberProfile && hiddenFields.length === 0"
         class="card card-clickable flat"
         @click="openPrivacyDialog"
       >
@@ -440,6 +455,18 @@ export default {
     })
 
     const memberId = ref(null)
+    const hasMemberProfile = computed(() => !!memberId.value)
+    const roleDisplayName = computed(() => {
+      const roleMap = {
+        SuperAdmin: '超级管理员',
+        Admin: '管理员',
+        Member: '队员'
+      }
+      return roleMap[profileForm.role] || profileForm.role || '未知'
+    })
+    const profileActionText = computed(() =>
+      hasMemberProfile.value ? '编辑个人信息' : '完善个人信息'
+    )
     const alumniContact = reactive({
       current_city: '',
       industry: '',
@@ -656,7 +683,7 @@ export default {
         join_month: member.join_month || '',
         graduate_month: member.graduate_month || '',
         tier: member.tier || '',
-        status: member.status || 'ACTIVE',
+        status: member.status || '',
         portfolio: member.portfolio || '',
         hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
         titles: Array.isArray(member.titles) ? member.titles : []
@@ -678,17 +705,23 @@ export default {
     }
 
     const goEdit = () => {
-      if (memberId.value) {
+      if (hasMemberProfile.value) {
         // 从 Profile 进入编辑页，编辑保存后应该返回 Profile
         router.push(
           `/personnel/members/${memberId.value}/edit?ref=${encodeURIComponent('/profile')}`
         )
       } else {
-        notify.warning('无法获取成员ID，请刷新页面重试')
+        notify.warning('当前账号还没有成员档案，请先完善个人信息')
+        router.push('/first-login')
       }
     }
 
     const openPrivacyDialog = () => {
+      if (!hasMemberProfile.value) {
+        notify.warning('当前账号还没有成员档案，请先完善个人信息')
+        router.push('/first-login')
+        return
+      }
       // 打开对话框时，将当前的隐私设置复制到临时变量
       tempHiddenFields.value = [...profileForm.hidden_fields]
       privacyDialog.value.visible = true
@@ -827,6 +860,9 @@ export default {
       alumniContactStatusText,
       alumniCompanyTitle,
       displayAlumniValue,
+      hasMemberProfile,
+      profileActionText,
+      roleDisplayName,
       initials,
       hiddenFields,
       getFieldDisplayName,

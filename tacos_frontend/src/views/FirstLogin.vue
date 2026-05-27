@@ -20,13 +20,13 @@
             <h3 class="section-title">基础信息</h3>
             <el-row :gutter="24">
               <el-col :xs="24" :sm="12">
-                <el-form-item label="学号" prop="user_id">
+                <el-form-item label="学号 / 工号" prop="user_id">
                   <el-input v-model="formData.user_id" disabled />
                 </el-form-item>
               </el-col>
               <el-col :xs="24" :sm="12">
                 <el-form-item label="姓名" prop="name">
-                  <el-input v-model="formData.name" disabled />
+                  <el-input v-model="formData.name" placeholder="请输入姓名" />
                 </el-form-item>
               </el-col>
             </el-row>

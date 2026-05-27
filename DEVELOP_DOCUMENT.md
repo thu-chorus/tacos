@@ -62,6 +62,7 @@ TaCOS 2.1 的校友系统保持轻量边界：
 - `User.is_active` 仅表示平台级账号是否启用，不作为成员状态字段使用。
 - 系统每天会将超过 6 个月未登录的 `ACTIVE` 成员设为 `INACTIVE`，`ALUMNI` 不受影响。
 - `INACTIVE` 成员登录时会被拒绝，并提示“账号已停用，请联系管理员协助处理”。
+- 任意账号若还没有成员档案，登录后会进入首次信息完善流程；管理员权限由 `User.role` 控制。
 
 ### 1.6 技术特性
 
@@ -1337,6 +1338,7 @@ POST /api/v1/personnel/titles/update-birthday-titles/
 | 排除范围 | `ALUMNI` 和已有 `INACTIVE` 成员不会被自动修改 |
 | 时间判断 | 有登录记录时按 `User.last_login` 判断；从未登录过的账号按 `User.date_joined` 判断 |
 | 登录拦截 | `User.is_active=false` 表示账号被禁用，`Member.status=INACTIVE` 表示成员停用 |
+| 档案补全 | 任意账号若没有成员档案，登录后进入首次信息完善流程；管理员权限由 `User.role` 控制 |
 
 ### 9.3 代码格式化规范
 

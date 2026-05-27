@@ -3,7 +3,11 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from .models import User
-from .policies import get_login_block_reason
+from .policies import (
+    get_login_block_reason,
+    user_is_first_login,
+    user_needs_profile_setup,
+)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -19,7 +23,8 @@ class LoginSerializer(serializers.Serializer):
                 user_obj = User.objects.get(user_id=user_id)
             except User.DoesNotExist:
                 raise serializers.ValidationError(
-                    {"user_id": "学号或密码错误，请重新输入"}, code="user_not_found"
+                    {"user_id": "学号/工号或密码错误，请重新输入"},
+                    code="user_not_found",
                 )
 
             block_reason = get_login_block_reason(user_obj)
@@ -35,18 +40,34 @@ class LoginSerializer(serializers.Serializer):
             )
             if not user:
                 raise serializers.ValidationError(
-                    {"password": "学号或密码错误，请重新输入"}, code="invalid_password"
+                    {"password": "学号/工号或密码错误，请重新输入"},
+                    code="invalid_password",
                 )
         else:
-            raise serializers.ValidationError("学号和密码都是必填项")
+            raise serializers.ValidationError("学号/工号和密码都是必填项")
         attrs["user"] = user
         return attrs
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_first_login = serializers.SerializerMethodField(read_only=True)
+    needs_profile_setup = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = User
-        fields = ("user_id", "role", "name")
+        fields = (
+            "user_id",
+            "role",
+            "name",
+            "is_first_login",
+            "needs_profile_setup",
+        )
+
+    def get_is_first_login(self, obj: User) -> bool:
+        return user_is_first_login(obj)
+
+    def get_needs_profile_setup(self, obj: User) -> bool:
+        return user_needs_profile_setup(obj)
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
