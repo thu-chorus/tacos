@@ -266,7 +266,12 @@
           <el-row :gutter="24">
             <el-col :xs="24" :sm="12">
               <el-form-item label="梯队">
-                <el-select v-model="formData.tier" placeholder="请选择梯队" style="width: 100%">
+                <el-select
+                  v-model="formData.tier"
+                  placeholder="请选择梯队"
+                  style="width: 100%"
+                  :disabled="!isAdmin"
+                >
                   <el-option label="一队" value="一队" />
                   <el-option label="二队" value="二队" />
                 </el-select>
@@ -750,9 +755,10 @@ export default {
           const updatePayload = { ...rest, hometown: formData.hometown }
           if (!isAdmin.value) {
             delete updatePayload.status
+            delete updatePayload.tier
           }
           const lookupId = route.params.id
-          await updateMember(lookupId, updatePayload)
+          await updateMember(lookupId, updatePayload, { skipErrorMessage: true })
           notify.success('队员信息更新成功')
           // 编辑保存后导航
           const refParam = route.query.ref
@@ -791,17 +797,16 @@ export default {
         }
       } catch (error) {
         console.error('Submit error:', error)
-        // 尝试从后端校验错误中提取详细提示
         const resp = error && error.response
         const data = resp && resp.data
+        const details = data && data.data ? data.data : data
         let message = '操作失败'
-        if (data && typeof data === 'object' && !data.message) {
-          // DRF校验错误通常是 { field: [msg...] }
-          const details = Object.entries(data)
+        if (details && typeof details === 'object' && !Array.isArray(details)) {
+          const detailText = Object.entries(details)
             .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join('; ') : String(v)}`)
             .join(' | ')
-          if (details) {
-            message = details
+          if (detailText) {
+            message = detailText
           }
         } else if (data && data.message) {
           message = data.message

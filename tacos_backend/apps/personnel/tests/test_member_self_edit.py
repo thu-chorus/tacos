@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from rest_framework.test import APIClient
 
-from apps.personnel.models import Member
+from apps.personnel.models import Member, MemberStatus
 
 User = get_user_model()
 
@@ -96,6 +96,35 @@ class MemberSelfEditPermissionTest(TestCase):
 
         self.client = APIClient()
 
+    def _full_update_payload(self, member):
+        birthday = member.birthday
+        if birthday and hasattr(birthday, "isoformat"):
+            birthday = birthday.isoformat()
+        return {
+            "name": member.name,
+            "gender": member.gender,
+            "voice_part": member.voice_part,
+            "department": member.department,
+            "department_other": member.department_other,
+            "class_name": member.class_name,
+            "wechat_id": member.wechat_id,
+            "phone_number": member.phone_number,
+            "email": member.email,
+            "dorm": member.dorm,
+            "birthday": birthday,
+            "hometown": member.hometown,
+            "ethnicity": member.ethnicity,
+            "political_status": member.political_status,
+            "political_affiliation": member.political_affiliation,
+            "is_specialty": member.is_specialty,
+            "is_centralized": member.is_centralized,
+            "position": member.position,
+            "join_month": member.join_month,
+            "graduate_month": member.graduate_month,
+            "tier": member.tier,
+            "portfolio": member.portfolio,
+        }
+
     def test_member_can_update_own_profile(self):
         """成员可以更新自己的资料。"""
         self.client.force_authenticate(user=self.user1)
@@ -107,6 +136,20 @@ class MemberSelfEditPermissionTest(TestCase):
         self.assertEqual(self.member1.name, "Updated Name")
         self.assertEqual(self.member1.dorm, "紫荆1#999")
 
+    def test_member_can_put_own_profile_without_status(self):
+        """完整更新未携带 status 时不应触发管理员状态校验。"""
+        self.client.force_authenticate(user=self.user1)
+        url = f"/api/v1/members/{self.member1.public_id}/"
+        data = self._full_update_payload(self.member1)
+        data["dorm"] = "紫荆1#888"
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, 200, response.json())
+        self.member1.refresh_from_db()
+        self.assertEqual(self.member1.dorm, "紫荆1#888")
+        self.assertEqual(self.member1.status, MemberStatus.ACTIVE)
+
     def test_member_cannot_clear_graduate_month(self):
         """编辑资料时预计毕业时间仍为必填项。"""
         self.client.force_authenticate(user=self.user1)
@@ -115,6 +158,44 @@ class MemberSelfEditPermissionTest(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("graduate_month", response.json()["data"])
+
+    def test_member_cannot_put_own_status(self):
+        """成员完整更新时也不能修改自己的状态。"""
+        self.client.force_authenticate(user=self.user1)
+        url = f"/api/v1/members/{self.member1.public_id}/"
+        data = self._full_update_payload(self.member1)
+        data["status"] = MemberStatus.ALUMNI
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("status", response.json()["data"])
+
+    def test_member_cannot_patch_own_tier(self):
+        """成员不能修改自己的梯队。"""
+        self.client.force_authenticate(user=self.user1)
+        url = f"/api/v1/members/{self.member1.public_id}/"
+
+        response = self.client.patch(url, {"tier": "二队"}, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("tier", response.json()["data"])
+        self.member1.refresh_from_db()
+        self.assertEqual(self.member1.tier, "一队")
+
+    def test_member_cannot_put_changed_own_tier(self):
+        """成员完整更新时也不能修改自己的梯队。"""
+        self.client.force_authenticate(user=self.user1)
+        url = f"/api/v1/members/{self.member1.public_id}/"
+        data = self._full_update_payload(self.member1)
+        data["tier"] = "二队"
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("tier", response.json()["data"])
+        self.member1.refresh_from_db()
+        self.assertEqual(self.member1.tier, "一队")
 
     def test_member_cannot_update_others_profile(self):
         """成员不能更新他人的资料。"""
