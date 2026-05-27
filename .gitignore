@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Build outputs
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
+# Temporary
+.tmp/
+.temp/
+
+# Database and media files
+*.sqlite3
+tacos_backend/static/
+tacos_media/*
+!tacos_media/.gitignore
+!tacos_media/.gitkeep
+
+# Backup files
+tacos_backup/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+.venv/
+venv/
+env/
+
+# Celery Beat
+celerybeat-schedule
+celerybeat-schedule*

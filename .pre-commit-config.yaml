@@ -1,0 +1,73 @@
+# TaCOS 提交前检查配置
+# 提交前统一运行格式化和基础文件检查
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+        files: \.(py|vue|js|jsx|cjs|mjs|ts|tsx|cts|mts|css|scss|json|md|toml|yaml|yml|html)$
+        exclude: |
+          (?x)^(
+            tacos_backend/.*/migrations/|
+            tacos_frontend/node_modules/|
+            (?:\.venv|venv|env)/|
+            build/|dist/|
+            static/|tacos_media/
+          )
+      - id: trailing-whitespace
+        files: \.(py|vue|js|jsx|cjs|mjs|ts|tsx|cts|mts|css|scss|json|md|toml|yaml|yml|html)$
+        exclude: |
+          (?x)^(
+            tacos_backend/.*/migrations/|
+            tacos_frontend/node_modules/|
+            (?:\.venv|venv|env)/|
+            build/|dist/|
+            static/|tacos_media/
+          )
+      - id: check-merge-conflict
+        exclude: |
+          (?x)^(
+            tacos_frontend/node_modules/|
+            (?:\.venv|venv|env)/|
+            build/|dist/|
+            static/|tacos_media/
+          )
+      - id: check-yaml
+      - id: check-toml
+
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.10.0
+    hooks:
+      - id: black
+        name: black (backend)
+        args: ["--config", "tacos_backend/pyproject.toml"]
+        files: ^tacos_backend/.*\.py$
+        exclude: |
+          (?x)^(
+            tacos_backend/.*/migrations/|
+            tacos_backend/.*/static/|
+            tacos_backend/.*/media/
+          )
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        name: isort (backend)
+        args: ["--settings-path", "tacos_backend/pyproject.toml"]
+        files: ^tacos_backend/.*\.py$
+        exclude: |
+          (?x)^(
+            tacos_backend/.*/migrations/|
+            tacos_backend/.*/static/|
+            tacos_backend/.*/media/
+          )
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        name: prettier (frontend)
+        additional_dependencies:
+          - prettier@3.1.0
+        files: ^tacos_frontend/src/.*\.(vue|js|jsx|cjs|mjs|ts|tsx|cts|mts|css|scss|json|md|html)$

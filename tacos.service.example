@@ -1,0 +1,52 @@
+[Unit]
+Description=TaCOS Django Application (Gunicorn)
+After=network.target
+
+[Service]
+Type=notify
+# 指定运行用户（根据实际情况修改，通常使用 www-data 或创建专用用户）
+User=www-data
+Group=www-data
+
+# 工作目录 - 修改为实际部署路径
+WorkingDirectory=/var/www/tacos/tacos_backend
+
+# 从 .env.production.local 文件读取环境变量（包含敏感信息）
+# 修改为实际部署路径
+EnvironmentFile=/var/www/tacos/tacos_backend/.env.production.local
+
+# 可以在这里覆盖特定的环境变量
+# 水印字体路径 - 根据系统实际安装的字体路径修改
+Environment="WATERMARK_FONT_PATH=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
+
+# Gunicorn 配置
+# 修改为实际的虚拟环境路径
+ExecStart=/var/www/tacos/tacos_backend/.venv/bin/gunicorn \
+    --workers 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --bind unix:/run/gunicorn/tacos.sock \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile /var/log/tacos/access.log \
+    --error-logfile /var/log/tacos/error.log \
+    --log-level info \
+    config.wsgi:application
+
+# 运行时目录
+RuntimeDirectory=gunicorn
+RuntimeDirectoryMode=755
+
+# 安全设置
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# 修改为实际的部署路径和媒体目录路径
+ReadWritePaths=/var/www/tacos/tacos_backend /var/www/tacos/tacos_media /var/log/tacos
+
+# 自动重启
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

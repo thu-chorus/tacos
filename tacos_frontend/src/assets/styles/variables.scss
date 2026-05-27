@@ -1,0 +1,96 @@
+// 颜色变量（Tsinghua Purple 主题）
+$primary-color: #722790;
+$primary-color-light: #9a56b5;
+$primary-color-dark: #5b1f72;
+
+$success-color: #67c23a;
+$success-color-light: #95d475;
+$success-color-dark: #529b2e;
+
+$warning-color: #e6a23c;
+$warning-color-light: #ebb563;
+$warning-color-dark: #b88230;
+
+$danger-color: #f56c6c;
+$danger-color-light: #f78989;
+$danger-color-dark: #c45656;
+
+$info-color: #909399;
+$info-color-light: #a6a9ad;
+$info-color-dark: #73767a;
+
+// 文本颜色
+$text-color-primary: #303133;
+$text-color-regular: #606266;
+$text-color-secondary: #909399;
+$text-color-placeholder: #c0c4cc;
+
+// 背景颜色
+$background-color-base: #f5f7fa;
+$background-color-light: #fafafa;
+$background-color-lighter: #ffffff;
+
+// 边框颜色
+$border-color-base: #dcdfe6;
+$border-color-light: #e4e7ed;
+$border-color-lighter: #ebeef5;
+$border-color-extra-light: #f2f6fc;
+$border-color-dark: #d3d4d6;
+$border-color-darker: #cdd0d6;
+
+// 字体
+$font-family-base:
+  'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑',
+  Arial, sans-serif;
+$font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+
+// 字体大小
+$font-size-extra-large: 20px;
+$font-size-large: 18px;
+$font-size-medium: 16px;
+$font-size-base: 14px;
+$font-size-small: 13px;
+$font-size-extra-small: 12px;
+
+// 行高
+$line-height-base: 1.5;
+
+// 圆角
+$border-radius-base: 4px;
+$border-radius-small: 2px;
+$border-radius-round: 20px;
+$border-radius-circle: 50%;
+
+// 间距
+$spacing-extra-large: 32px;
+$spacing-large: 24px;
+$spacing-medium: 16px;
+$spacing-base: 12px;
+$spacing-small: 8px;
+$spacing-extra-small: 4px;
+
+// 阴影
+$box-shadow-base:
+  0 2px 4px rgba(0, 0, 0, 0.12),
+  0 0 6px rgba(0, 0, 0, 0.04);
+$box-shadow-dark:
+  0 2px 4px rgba(0, 0, 0, 0.12),
+  0 0 6px rgba(0, 0, 0, 0.12);
+$box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
+// 层级
+$z-index-normal: 1;
+$z-index-top: 1000;
+$z-index-popper: 2000;
+
+// 断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1920px;
+
+// 动画时间
+$transition-base: all 0.3s ease;
+$transition-fast: all 0.2s ease;
+$transition-slow: all 0.5s ease;

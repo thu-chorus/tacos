@@ -1,0 +1,420 @@
+// 组件样式
+@use './variables.scss' as *;
+@use './mixins.scss' as *;
+
+// 页面标题
+.page-title {
+  font-size: $font-size-large;
+  font-weight: 600;
+  color: $text-color-primary;
+  margin-bottom: $spacing-medium;
+
+  .subtitle {
+    font-size: $font-size-base;
+    font-weight: normal;
+    color: $text-color-secondary;
+    margin-top: $spacing-small;
+  }
+}
+
+// 面包屑导航
+.breadcrumb {
+  margin-bottom: $spacing-medium;
+
+  .breadcrumb-item {
+    display: inline-block;
+    color: $text-color-secondary;
+
+    &:not(:last-child)::after {
+      content: '/';
+      margin: 0 $spacing-small;
+      color: $text-color-placeholder;
+    }
+
+    &.active {
+      color: $text-color-primary;
+    }
+
+    a {
+      color: $primary-color;
+
+      &:hover {
+        color: $primary-color-dark;
+      }
+    }
+  }
+}
+
+// 搜索框
+.search-box {
+  .el-input {
+    .el-input__inner {
+      border-radius: $border-radius-round;
+    }
+  }
+}
+
+// 数据表格
+.data-table {
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-medium;
+
+    .table-title {
+      font-size: $font-size-medium;
+      font-weight: 600;
+      color: $text-color-primary;
+    }
+
+    .table-actions {
+      .el-button + .el-button {
+        margin-left: $spacing-small;
+      }
+    }
+  }
+
+  .table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: $spacing-medium;
+
+    .table-info {
+      color: $text-color-secondary;
+      font-size: $font-size-small;
+    }
+  }
+}
+
+// 表单容器
+.form-container {
+  .form-header {
+    margin-bottom: $spacing-large;
+
+    .form-title {
+      font-size: $font-size-large;
+      font-weight: 600;
+      color: $text-color-primary;
+      margin-bottom: $spacing-small;
+    }
+
+    .form-description {
+      color: $text-color-secondary;
+      font-size: $font-size-base;
+    }
+  }
+
+  .form-actions {
+    margin-top: $spacing-large;
+    text-align: center;
+
+    .el-button + .el-button {
+      margin-left: $spacing-medium;
+    }
+  }
+}
+
+// 状态标签
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: $border-radius-base;
+  font-size: $font-size-small;
+
+  &.status-active {
+    background-color: $success-color-light;
+    color: $success-color-dark;
+  }
+
+  &.status-inactive {
+    background-color: $info-color-light;
+    color: $info-color-dark;
+  }
+
+  &.status-pending {
+    background-color: $warning-color-light;
+    color: $warning-color-dark;
+  }
+
+  &.status-danger {
+    background-color: $danger-color-light;
+    color: $danger-color-dark;
+  }
+}
+
+// 声部标签
+.voice-part-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: $border-radius-base;
+  font-size: $font-size-small;
+  color: #fff;
+  font-weight: 500;
+
+  &.voice-s1 {
+    background-color: #ff6b9d;
+  }
+  &.voice-s2 {
+    background-color: #ffa8cc;
+  }
+  &.voice-a1 {
+    background-color: #c44569;
+  }
+  &.voice-a2 {
+    background-color: #f8b500;
+  }
+  &.voice-t1 {
+    background-color: #4834d4;
+  }
+  &.voice-t2 {
+    background-color: #686de0;
+  }
+  &.voice-b1 {
+    background-color: #30336b;
+  }
+  &.voice-b2 {
+    background-color: #130f40;
+  }
+  &.voice-other {
+    background-color: #95a5a6;
+  }
+}
+
+// 梯队标签
+.tier-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: $border-radius-base;
+  font-size: $font-size-small;
+  color: #fff;
+  font-weight: 500;
+
+  &.tier-1 {
+    background-color: #e74c3c;
+  }
+  &.tier-2 {
+    background-color: #3498db;
+  }
+}
+
+// 空状态
+.empty-state {
+  text-align: center;
+  padding: $spacing-extra-large;
+  color: $text-color-secondary;
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: $spacing-medium;
+    color: $text-color-placeholder;
+  }
+
+  .empty-text {
+    font-size: $font-size-medium;
+    margin-bottom: $spacing-small;
+  }
+
+  .empty-description {
+    font-size: $font-size-small;
+    color: $text-color-placeholder;
+  }
+}
+
+// 加载状态
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: $spacing-extra-large;
+
+  .loading-text {
+    margin-left: $spacing-small;
+    color: $text-color-secondary;
+  }
+}
+
+// 错误状态
+.error-container {
+  text-align: center;
+  padding: $spacing-extra-large;
+
+  .error-icon {
+    font-size: 64px;
+    color: $danger-color;
+    margin-bottom: $spacing-medium;
+  }
+
+  .error-title {
+    font-size: $font-size-large;
+    color: $text-color-primary;
+    margin-bottom: $spacing-small;
+  }
+
+  .error-message {
+    color: $text-color-secondary;
+    margin-bottom: $spacing-medium;
+  }
+
+  .error-actions {
+    .el-button + .el-button {
+      margin-left: $spacing-small;
+    }
+  }
+}
+
+// 文件上传
+.file-upload {
+  .upload-dragger {
+    width: 100%;
+    height: 200px;
+    border: 2px dashed $border-color-base;
+    border-radius: $border-radius-base;
+    background: $background-color-lighter;
+    transition: $transition-base;
+
+    &:hover {
+      border-color: $primary-color;
+    }
+
+    .upload-content {
+      @include center-flex;
+      flex-direction: column;
+      height: 100%;
+
+      .upload-icon {
+        font-size: 48px;
+        color: $text-color-placeholder;
+        margin-bottom: $spacing-small;
+      }
+
+      .upload-text {
+        color: $text-color-secondary;
+        margin-bottom: $spacing-small;
+      }
+
+      .upload-hint {
+        font-size: $font-size-small;
+        color: $text-color-placeholder;
+      }
+    }
+  }
+
+  .upload-progress {
+    margin-top: $spacing-medium;
+  }
+}
+
+// 统计卡片
+.stat-card {
+  @include card-base;
+  text-align: center;
+
+  .stat-icon {
+    font-size: 48px;
+    margin-bottom: $spacing-small;
+
+    &.stat-primary {
+      color: $primary-color;
+    }
+    &.stat-success {
+      color: $success-color;
+    }
+    &.stat-warning {
+      color: $warning-color;
+    }
+    &.stat-danger {
+      color: $danger-color;
+    }
+  }
+
+  .stat-value {
+    font-size: $font-size-extra-large;
+    font-weight: bold;
+    color: $text-color-primary;
+    margin-bottom: $spacing-small;
+  }
+
+  .stat-label {
+    color: $text-color-secondary;
+    font-size: $font-size-base;
+  }
+}
+
+// 响应式调整
+@include respond-to(sm) {
+  .data-table {
+    .table-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: $spacing-medium;
+    }
+
+    .table-footer {
+      flex-direction: column;
+      gap: $spacing-medium;
+    }
+  }
+
+  .form-container {
+    .form-actions {
+      .el-button {
+        width: 100%;
+        margin: $spacing-small 0 0 0;
+      }
+    }
+  }
+}
+
+.input-modern {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: var(--background, #fff);
+  color: var(--foreground, #111827);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--brand-500, #b88a4a);
+    box-shadow: 0 0 0 3px rgba(184, 138, 74, 0.2);
+  }
+}
+
+.form-item {
+  margin-bottom: 16px;
+}
+.form-inline {
+  display: flex;
+  align-items: center;
+}
+.form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--foreground, #111827);
+}
+.input-wrapper {
+  position: relative;
+}
+.field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.checkbox-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.w-full {
+  width: 100%;
+}

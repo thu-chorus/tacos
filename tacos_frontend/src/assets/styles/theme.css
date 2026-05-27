@@ -1,0 +1,124 @@
+:root {
+  --brand-50: #faf5fb;
+  --brand-100: #f3e8f7;
+  --brand-200: #e6d1ef;
+  --brand-300: #d2aee2;
+  --brand-400: #b981d1;
+  --brand-500: #9a56b5; /* 主色 */
+  --brand-600: #7e379c;
+  --brand-700: #6a2c86;
+  --brand-800: #5b1f72;
+  --brand-900: #46165a;
+
+  --foreground: #1f1f1f;
+  --muted-foreground: #5a5a5a;
+  --background: #ffffff;
+  --muted: #f6f2ec;
+  --border: #eadff3;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+.theme-wood {
+  --brand-50: #faf7f2;
+  --brand-100: #f3eadf;
+  --brand-200: #e6d3bb;
+  --brand-300: #d9b991;
+  --brand-400: #cfa876;
+  --brand-500: #b88a4a;
+  --brand-600: #9b7036;
+  --brand-700: #7d582a;
+  --brand-800: #5f4120;
+  --brand-900: #4b3219;
+
+  --foreground: #1f1f1f;
+  --muted-foreground: #5a5a5a;
+  --background: #ffffff;
+  --muted: #f6f2ec;
+  --border: #e6e0d7;
+}
+
+.theme-purple {
+  --brand-50: #faf5fb;
+  --brand-100: #f3e8f7;
+  --brand-200: #e6d1ef;
+  --brand-300: #d2aee2;
+  --brand-400: #b981d1;
+  --brand-500: #9a56b5;
+  --brand-600: #7e379c;
+  --brand-700: #6a2c86;
+  --brand-800: #5b1f72;
+  --brand-900: #46165a;
+
+  --foreground: #1f1f1f;
+  --muted-foreground: #5a5a5a;
+  --background: #ffffff;
+  --muted: #f6f2ec;
+  --border: #eadff3;
+}
+
+.bg-brand {
+  background-color: var(--brand-500);
+}
+.text-brand {
+  color: var(--brand-500);
+}
+.border-brand {
+  border-color: var(--brand-500);
+}
+
+.bg-surface {
+  background-color: var(--background);
+}
+.text-foreground {
+  color: var(--foreground);
+}
+.border-default {
+  border-color: var(--border);
+}
+
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.btn-modern.primary {
+  background: var(--brand-500);
+  color: #fff;
+  border-color: var(--brand-500);
+}
+.btn-modern.danger {
+  background: var(--el-color-danger);
+  color: #fff;
+  border-color: var(--el-color-danger);
+}
+.btn-modern.success {
+  background: var(--el-color-success);
+  color: #fff;
+  border-color: var(--el-color-success);
+}
+.btn-modern.warning {
+  background: var(--el-color-warning);
+  color: #fff;
+  border-color: var(--el-color-warning);
+}
+.btn-modern.primary:hover {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+}
+.btn-modern.ghost:hover {
+  background: var(--muted);
+}

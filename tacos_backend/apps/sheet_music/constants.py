@@ -1,0 +1,3 @@
+WATERMARK_CACHE_VERSION = "wm-v2-geometry"
+SHEET_STREAM_TOKEN_MAX_AGE_SECONDS = 60 * 60
+SHEET_STREAM_TOKEN_SALT = "sheet-download-task-stream"

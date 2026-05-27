@@ -1,0 +1,403 @@
+// 主样式文件
+@use 'sass:color';
+@use './variables.scss' as *;
+@use './mixins.scss' as *;
+@use './components.scss' as *;
+
+// 主题变量：Element Plus（Tsinghua Purple）
+:root {
+  --el-color-primary: #{$primary-color};
+  --el-color-primary-dark-2: #{color.scale($primary-color, $lightness: -10%)};
+  --el-color-primary-light-3: #{color.scale($primary-color, $lightness: 12%)};
+  --el-color-primary-light-5: #{color.scale($primary-color, $lightness: 20%)};
+  --el-color-primary-light-7: #{color.scale($primary-color, $lightness: 50%)};
+  --el-color-primary-light-8: #{color.scale($primary-color, $lightness: 85%)};
+  --el-color-primary-light-9: #{color.scale($primary-color, $lightness: 92%)};
+}
+
+// 进度条颜色适配：NProgress
+#nprogress {
+  .bar {
+    background: var(--el-color-primary) !important;
+  }
+  .peg {
+    box-shadow:
+      0 0 10px var(--el-color-primary),
+      0 0 5px var(--el-color-primary) !important;
+  }
+}
+
+// 全局样式重置
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  color: $text-color-primary;
+  background-color: $background-color-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 清除浮动
+.clearfix::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+// 文本对齐
+.text-left {
+  text-align: left;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+// 显示/隐藏
+.show {
+  display: block !important;
+}
+.hide {
+  display: none !important;
+}
+
+// 边距工具类
+@for $i from 0 through 5 {
+  .m-#{$i} {
+    margin: #{$i * 8}px !important;
+  }
+  .mt-#{$i} {
+    margin-top: #{$i * 8}px !important;
+  }
+  .mr-#{$i} {
+    margin-right: #{$i * 8}px !important;
+  }
+  .mb-#{$i} {
+    margin-bottom: #{$i * 8}px !important;
+  }
+  .ml-#{$i} {
+    margin-left: #{$i * 8}px !important;
+  }
+  .mx-#{$i} {
+    margin-left: #{$i * 8}px !important;
+    margin-right: #{$i * 8}px !important;
+  }
+  .my-#{$i} {
+    margin-top: #{$i * 8}px !important;
+    margin-bottom: #{$i * 8}px !important;
+  }
+
+  .p-#{$i} {
+    padding: #{$i * 8}px !important;
+  }
+  .pt-#{$i} {
+    padding-top: #{$i * 8}px !important;
+  }
+  .pr-#{$i} {
+    padding-right: #{$i * 8}px !important;
+  }
+  .pb-#{$i} {
+    padding-bottom: #{$i * 8}px !important;
+  }
+  .pl-#{$i} {
+    padding-left: #{$i * 8}px !important;
+  }
+  .px-#{$i} {
+    padding-left: #{$i * 8}px !important;
+    padding-right: #{$i * 8}px !important;
+  }
+  .py-#{$i} {
+    padding-top: #{$i * 8}px !important;
+    padding-bottom: #{$i * 8}px !important;
+  }
+}
+
+// 布局工具类
+.flex {
+  display: flex;
+
+  &.flex-column {
+    flex-direction: column;
+  }
+  &.flex-wrap {
+    flex-wrap: wrap;
+  }
+  &.justify-start {
+    justify-content: flex-start;
+  }
+  &.justify-center {
+    justify-content: center;
+  }
+  &.justify-end {
+    justify-content: flex-end;
+  }
+  &.justify-between {
+    justify-content: space-between;
+  }
+  &.justify-around {
+    justify-content: space-around;
+  }
+  &.align-start {
+    align-items: flex-start;
+  }
+  &.align-center {
+    align-items: center;
+  }
+  &.align-end {
+    align-items: flex-end;
+  }
+  &.align-stretch {
+    align-items: stretch;
+  }
+}
+
+// 响应式断点
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hidden-desktop {
+    display: none !important;
+  }
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: $border-color-light;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-color-base;
+  border-radius: 3px;
+
+  &:hover {
+    background: $border-color-dark;
+  }
+}
+
+// 选择文本样式
+::selection {
+  background-color: $primary-color;
+  color: #fff;
+}
+
+// 链接样式
+a {
+  color: $primary-color;
+  text-decoration: none;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: $primary-color-dark;
+  }
+
+  &:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+}
+
+// 表单元素样式
+input,
+textarea,
+select {
+  &:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+}
+
+// 按钮基础样式
+.btn {
+  @include button-base;
+
+  &.btn-primary {
+    @include button-variant($primary-color, #fff);
+  }
+
+  &.btn-success {
+    @include button-variant($success-color, #fff);
+  }
+
+  &.btn-warning {
+    @include button-variant($warning-color, #fff);
+  }
+
+  &.btn-danger {
+    @include button-variant($danger-color, #fff);
+  }
+
+  &.btn-default {
+    @include button-variant($border-color-base, $text-color-primary);
+  }
+}
+
+.big-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.sm-btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.sm-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+.xsm-btn {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+}
+.xsm-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+// 卡片样式
+.card {
+  @include card-base;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.card-content {
+  padding: 10px 12px;
+}
+.card-clickable {
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+.card-clickable:hover {
+  border-color: var(--brand-300);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.board-card {
+  @include card-base;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.board-card-content {
+  padding: 0;
+}
+.board-card-content .header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0px;
+}
+.board-card-content .header .header-text {
+  display: flex;
+  flex-direction: column;
+  margin-top: -14px;
+  margin-left: -10px;
+}
+.board-card-content .header .header-text h3 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+.board-card-content .header .header-text .description {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.list-title {
+  font-weight: 600;
+  color: #111827;
+}
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+// 特殊组件：分割线、视图logo
+.divider {
+  height: 1px;
+  background: var(--border, #e5e7eb);
+  margin: 14px 0;
+}
+
+// 页面容器
+.page-container {
+  min-height: 100vh;
+  padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+}
+
+// 内容区域
+.content-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: $border-radius-base;
+  box-shadow: $box-shadow-base;
+  overflow: hidden;
+}
+
+// 表格样式增强
+.el-table {
+  .el-table__row {
+    &:hover {
+      background-color: $background-color-light;
+    }
+  }
+}
+
+// 加载动画
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid $border-color-light;
+  border-radius: 50%;
+  border-top: 2px solid $primary-color;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

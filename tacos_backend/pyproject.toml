@@ -1,0 +1,31 @@
+# Black 配置
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # 目录
+  \.git
+  | \.venv
+  | venv
+  | env
+  | __pycache__
+  | \.pytest_cache
+  | migrations
+  | static
+  | media
+  | build
+  | dist
+)/
+'''
+
+# isort 配置（导入排序）
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+extend_skip = ["migrations", "static", "media"]
+known_django = ["django"]
+known_first_party = ["apps", "config"]
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
