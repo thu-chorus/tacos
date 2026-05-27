@@ -13,6 +13,6 @@ class UserIdBackend(ModelBackend):
             user = User.objects.get(user_id=user_id)
         except User.DoesNotExist:  # type: ignore[attr-defined]
             return None
-        if user.check_password(password):
+        if user.check_password(password) and self.user_can_authenticate(user):
             return user
         return None

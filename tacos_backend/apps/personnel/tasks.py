@@ -6,16 +6,65 @@ Handles asynchronous member export generation and cleanup tasks.
 
 import logging
 import os
-from datetime import timedelta
+from calendar import monthrange
 
-from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management import call_command
+from django.db.models import Q
 from django.utils import timezone
 
 from celery import shared_task
 
 logger = logging.getLogger(__name__)
+
+
+def _months_before(value, months: int):
+    """返回 value 往前 months 个自然月的同一时刻。"""
+    month = value.month - months
+    year = value.year
+    while month <= 0:
+        month += 12
+        year -= 1
+    day = min(value.day, monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
+
+@shared_task
+def deactivate_stale_active_members(months: int = 6):
+    """将超过指定月数未登录的在队成员设为停用。
+
+    仅处理 `ACTIVE` 成员；校友和已停用成员不会被修改。没有登录记录的
+    成员按账号创建时间判断，避免新建账号被立即停用。
+    """
+    from .models import Member, MemberStatus
+
+    months = int(months)
+    if months < 1:
+        raise ValueError("months must be positive")
+
+    now = timezone.now()
+    cutoff = _months_before(now, months)
+    stale_members = Member.objects.filter(status=MemberStatus.ACTIVE).filter(
+        Q(user__last_login__lte=cutoff)
+        | Q(user__last_login__isnull=True, user__date_joined__lte=cutoff)
+    )
+
+    updated_count = stale_members.update(
+        status=MemberStatus.INACTIVE,
+        updated_at=now,
+    )
+    logger.info(
+        "已将 %s 名超过 %s 个月未登录的在队成员设为停用，截止时间：%s",
+        updated_count,
+        months,
+        cutoff.isoformat(),
+    )
+    return {
+        "status": "success",
+        "months": months,
+        "cutoff": cutoff.isoformat(),
+        "updated_count": updated_count,
+    }
 
 
 @shared_task

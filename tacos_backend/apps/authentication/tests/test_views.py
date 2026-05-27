@@ -1,10 +1,10 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from rest_framework.test import APIClient
 
-from apps.personnel.models import Member
+from apps.personnel.models import Member, MemberStatus
 
 
 class AuthViewsTest(TestCase):
@@ -24,6 +24,8 @@ class AuthViewsTest(TestCase):
         self.assertIn("data", res.json())
         token = res.json()["data"]["token"]
         refresh = res.json()["data"]["refresh_token"]
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.last_login)
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         me_url = reverse("me")
@@ -40,6 +42,38 @@ class AuthViewsTest(TestCase):
         logout_url = reverse("logout")
         out_res = self.client.post(logout_url)
         self.assertEqual(out_res.status_code, 200)
+
+    def test_inactive_member_login_returns_admin_help_message(self):
+        Member.objects.create(user=self.user, name="张三", status=MemberStatus.INACTIVE)
+
+        response = self.client.post(
+            reverse("login"),
+            {"user_id": "2021012345", "password": "password123"},
+            format="json",
+        )
+
+        body = response.json()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(body["message"], "账号已停用，请联系管理员协助处理")
+        self.assertEqual(body["data"]["user_id"], ["账号已停用，请联系管理员协助处理"])
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.last_login)
+
+    def test_disabled_user_login_returns_account_disabled_message(self):
+        self.user.is_active = False
+        self.user.save(update_fields=["is_active"])
+
+        response = self.client.post(
+            reverse("login"),
+            {"user_id": "2021012345", "password": "password123"},
+            format="json",
+        )
+
+        body = response.json()
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(body["message"], "用户账号已被禁用，请联系管理员")
+        self.assertEqual(body["data"]["user_id"], ["用户账号已被禁用，请联系管理员"])
+        self.assertIsNone(authenticate(user_id="2021012345", password="password123"))
 
     def test_first_login_requires_graduate_month(self):
         res = self.client.post(

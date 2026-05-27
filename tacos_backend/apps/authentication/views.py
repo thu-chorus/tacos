@@ -1,3 +1,4 @@
+from django.contrib.auth.models import update_last_login
 from django.http import JsonResponse
 
 from rest_framework.decorators import api_view, permission_classes
@@ -66,6 +67,8 @@ def login(request: Request) -> JsonResponse:
 
     default_password = getattr(settings, "DEFAULT_INITIAL_PASSWORD", "ChangeMe123!")
     is_first_login = user.check_password(default_password)
+
+    update_last_login(None, user)
 
     refresh = RefreshToken.for_user(user)
     data = {

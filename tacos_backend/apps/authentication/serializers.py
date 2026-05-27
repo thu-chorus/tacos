@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from .models import User
+from .policies import get_login_block_reason
 
 
 class LoginSerializer(serializers.Serializer):
@@ -14,8 +15,6 @@ class LoginSerializer(serializers.Serializer):
         password = attrs.get("password")
         if user_id and password:
             # 首先检查用户是否存在
-            from .models import User
-
             try:
                 user_obj = User.objects.get(user_id=user_id)
             except User.DoesNotExist:
@@ -23,10 +22,11 @@ class LoginSerializer(serializers.Serializer):
                     {"user_id": "学号或密码错误，请重新输入"}, code="user_not_found"
                 )
 
-            # 检查用户是否激活
-            if not user_obj.is_active:
+            block_reason = get_login_block_reason(user_obj)
+            if block_reason is not None:
                 raise serializers.ValidationError(
-                    {"user_id": "用户账号已被禁用，请联系管理员"}, code="user_inactive"
+                    {"user_id": block_reason.message},
+                    code=block_reason.code,
                 )
 
             # 验证密码

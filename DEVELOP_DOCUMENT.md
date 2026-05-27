@@ -3,8 +3,6 @@
 **版本**: v2.1.0
 **最后更新**: 2026-05-27
 
----
-
 ## 目录
 
 1. [项目概述](#一项目概述)
@@ -17,8 +15,7 @@
 8. [部署运维](#八部署运维)
 9. [开发规范](#九开发规范)
 10. [更新日志](#十更新日志)
-
----
+11. [附录](#附录)
 
 ## 一、项目概述
 
@@ -46,11 +43,11 @@
 | **Member** | 普通队员，查看和使用基本功能 |
 | **Alumni** | 由 Member 档案状态标识，查看校友可见活动和乐谱，维护联系方式 |
 
-### 1.5 TaCOS 2.1 校友能力
+### 1.4 TaCOS 2.1 校友能力
 
 TaCOS 2.1 的校友系统保持轻量边界：
 
-- 成员状态为管理员手动触发，不根据毕业时间自动转换。
+- 成员状态主要由管理员维护，不根据毕业时间自动转换。
 - `Member.status` 支持 `ACTIVE`、`ALUMNI`、`INACTIVE`。
 - 队员列表明确展示成员状态，并按 `ACTIVE`、`ALUMNI`、`INACTIVE` 优先排序。
 - 成员切换为 `ALUMNI` 后创建 `AlumniProfile`，用于当前城市、行业、公司职位、毕业时间、简介、备注和开放联系开关；微信、电话、邮箱沿用 `Member` 档案字段。`Member.graduate_month` 仍表示预计毕业时间，管理员创建成员时可暂空，用户首次登录补全时必填；`AlumniProfile.graduation_month` 表示校友毕业时间且保存时必填。
@@ -59,7 +56,14 @@ TaCOS 2.1 的校友系统保持轻量边界：
 - 乐谱增加 `visible_to_alumni`，校友可查看显式开放给校友的乐谱；关联到校友可见活动的乐谱也会对校友可见。
 - 本版本不包含导师制、校友活动组织、自动毕业转状态。
 
-### 1.4 技术特性
+### 1.5 成员生命周期
+
+- `Member.status` 是成员生命周期状态来源，支持 `ACTIVE`、`ALUMNI`、`INACTIVE`。
+- `User.is_active` 仅表示平台级账号是否启用，不作为成员状态字段使用。
+- 系统每天会将超过 6 个月未登录的 `ACTIVE` 成员设为 `INACTIVE`，`ALUMNI` 不受影响。
+- `INACTIVE` 成员登录时会被拒绝，并提示“账号已停用，请联系管理员协助处理”。
+
+### 1.6 技术特性
 
 - ✅ 前后端分离架构
 - ✅ JWT 身份认证
@@ -69,39 +73,20 @@ TaCOS 2.1 的校友系统保持轻量边界：
 - ✅ 文件安全管理
 - ✅ 完整的权限控制
 
-
----
-
 ## 二、技术架构
 
 ### 2.1 技术栈总览
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        前端层 (Frontend)                      │
-│    Vue.js 3 + Vite + Tailwind CSS + Element Plus/Vant       │
-└─────────────────────────────────────────────────────────────┘
-                              ↓ HTTP/HTTPS (REST API)
-┌─────────────────────────────────────────────────────────────┐
-│                       API 网关层 (Nginx)                      │
-│              静态文件服务 + 反向代理 + 负载均衡                 │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    应用层 (Django + DRF)                      │
-│          Gunicorn + Django REST Framework + JWT              │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌──────────────────────┬──────────────────────┬───────────────┐
-│   数据库 (PostgreSQL) │  缓存 (Redis)        │ 任务队列       │
-│   关系型数据存储       │  会话/Token缓存       │ Celery+Redis  │
-└──────────────────────┴──────────────────────┴───────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    文件存储 (File System)                     │
-│         tacos_media/ - 乐谱、作业、公告图片等                  │
-└─────────────────────────────────────────────────────────────┘
-```
+| 层级 | 主要组件 | 职责 | 下游 |
+|------|----------|------|------|
+| 前端层 | Vue 3、Vite、Tailwind CSS、Element Plus、Vant | 页面渲染、路由、状态管理、API 调用 | API 网关 |
+| API 网关层 | Nginx | 静态文件服务、HTTPS 终止、反向代理 | 应用层 |
+| 应用层 | Gunicorn、Django、Django REST Framework、SimpleJWT | 业务 API、鉴权、权限控制、异步任务调度 | 数据库、Redis、文件存储 |
+| 数据层 | PostgreSQL / SQLite | 生产 / 开发测试关系型数据存储 | - |
+| 缓存与队列 | Redis、Celery | 缓存、消息队列、后台任务执行 | 应用层、任务结果 |
+| 文件存储 | `tacos_media/`、可选 OSS | 乐谱、作业附件、公告图片、水印文件 | 应用层 |
+
+请求链路：浏览器 -> Nginx -> Gunicorn -> Django/DRF -> PostgreSQL、Redis、Celery、文件存储。
 
 ### 2.2 前端技术
 
@@ -223,9 +208,6 @@ Nginx (80/443)
 PostgreSQL      Redis      Celery Worker
 ```
 
-
----
-
 ## 三、核心模块设计
 
 ### 3.1 认证与权限模块
@@ -269,7 +251,7 @@ PostgreSQL      Redis      Celery Worker
 
 **重要**：除登录、token刷新和加密下载链接外，所有API端点都要求用户登录。匿名用户无法访问任何业务数据。
 
-### 2.人事管理
+### 3.2 角色与权限矩阵
 
 #### 用户角色
 
@@ -299,7 +281,7 @@ class UserRole:
 | 提交作业 | ✅ | ✅ | ✅ |
 | 系统配置 | ❌ | ❌ | ✅ |
 
-### 3.2 人事管理模块
+### 3.3 人事管理模块
 
 #### 队员档案 (Member)
 
@@ -373,7 +355,7 @@ class UserRole:
 - `Title`: 称号定义
 - `TitleGrant`: 称号授予记录（多对多关系）
 
-### 3.3 谱务管理模块
+### 3.4 谱务管理模块
 
 #### 乐谱模型 (SheetMusic)
 
@@ -440,7 +422,7 @@ GET /api/v1/sheets/task/{task_id}/
 详情页预览使用同一套异步流程生成完整带水印 PDF。任务完成后前端使用返回的
 `stream_url` 作为浏览器 PDF 查看器地址，避免先把完整 PDF 下载成 Axios blob。
 
-### 3.4 活动管理模块
+### 3.5 活动管理模块
 
 #### 活动模型 (Event)
 
@@ -476,7 +458,7 @@ GET /api/v1/sheets/task/{task_id}/
 - 大小限制: ≤ 5MB
 - 存储路径: `tacos_media/event_announcements/`
 
-### 3.5 签到系统
+### 3.6 签到系统
 
 #### 签到会话 (CheckInSession)
 
@@ -513,7 +495,7 @@ GET /api/v1/sheets/task/{task_id}/
 | `latitude` | Decimal | ❌ | 纬度（LOCATION类型） |
 | `longitude` | Decimal | ❌ | 经度（LOCATION类型） |
 
-### 3.6 作业系统
+### 3.7 作业系统
 
 #### 作业模型 (Assignment)
 
@@ -552,8 +534,6 @@ GET /api/v1/sheets/task/{task_id}/
 - **学生附件**: 作业提交时上传的作业文件
 - **格式限制**: 常见文档格式（PDF、DOCX、图片等）
 - **大小限制**: 单文件 ≤ 10MB
-
----
 
 ## 四、API 接口文档
 
@@ -805,7 +785,6 @@ GET /api/v1/common/media/?path=<相对路径>&token=<临时token>
 ```
 
 用于访问受保护的媒体文件（公告图片、作业附件等）。
----
 
 ## 五、数据库设计
 
@@ -882,8 +861,6 @@ DATABASES = {
     }
 }
 ```
-
----
 
 ## 六、项目结构
 
@@ -1006,8 +983,6 @@ tacos_media/                 # 项目同级目录
     └── {UUID}_{filename}
 ```
 
----
-
 ## 七、配置管理
 
 ### 7.1 环境变量 (.env)
@@ -1102,8 +1077,6 @@ export const EVENT_VISIBILITY = [
 - ✅ 支持动态添加选项
 - ✅ 后端兼容任意文本值
 - ✅ 历史数据无需迁移
-
----
 
 ## 八、部署运维
 
@@ -1315,8 +1288,6 @@ cat .env.production.local | grep DB_
 SELECT count(*) FROM pg_stat_activity;
 ```
 
----
-
 ## 九、开发规范
 
 ### 9.1 生日称号自动更新
@@ -1354,7 +1325,20 @@ POST /api/v1/personnel/titles/update-birthday-titles/
 ('0 9 * * *', 'apps.personnel.tasks.send_birthday_notifications'),
 ```
 
-### 9.2 代码格式化规范
+### 9.2 长期未登录成员停用
+
+该定时任务每天自动将超过 6 个月未登录的在队成员设为停用。
+
+| 项目 | 说明 |
+|------|------|
+| 任务名 | `apps.personnel.tasks.deactivate_stale_active_members` |
+| 调度 | Celery Beat 每日 02:30 执行 |
+| 处理范围 | 仅处理 `Member.status=ACTIVE` 的成员 |
+| 排除范围 | `ALUMNI` 和已有 `INACTIVE` 成员不会被自动修改 |
+| 时间判断 | 有登录记录时按 `User.last_login` 判断；从未登录过的账号按 `User.date_joined` 判断 |
+| 登录拦截 | `User.is_active=false` 表示账号被禁用，`Member.status=INACTIVE` 表示成员停用 |
+
+### 9.3 代码格式化规范
 
 本项目使用自动化工具保持代码风格一致性。
 
@@ -1440,7 +1424,7 @@ npm run lint
 
 详见 [代码格式化指南](./scripts/FORMATTING_GUIDE.md)
 
-### 9.3 Git 工作流
+### 9.4 Git 工作流
 
 ```bash
 # 开发分支
@@ -1460,8 +1444,6 @@ git merge dev
 git tag v1.0.2
 git push origin main --tags
 ```
-
----
 
 ## 十、更新日志
 
@@ -1589,8 +1571,6 @@ git push origin main --tags
 - 签到系统
 - 作业管理系统
 
----
-
 ## 附录
 
 ### A. 待办事项
@@ -1628,11 +1608,10 @@ git push origin main --tags
 **文档更新**: 欢迎提交 Pull Request
 **版本发布**: 遵循语义化版本规范
 
----
+### D. API 示例补充
 
-**文档最后更新**: 2025-10-31
-**文档版本**: v1.0.1
-**维护者**: TaCOS开发团队
+#### D.1 队员管理 API
+
 ```
 POST /api/v1/members
 Authorization: Bearer <token>
@@ -1673,7 +1652,7 @@ Response:
 }
 ```
 
-#### 批量导入队员
+##### D.1.1 批量导入队员
 - 下载模板：`GET /api/v1/members/bulk-template/`（Excel .xlsx）
 - 执行导入：`POST /api/v1/members/bulk-import/`（multipart/form-data，字段：
   - `file`：上传的 .csv 或 .xlsx 文件
@@ -1689,16 +1668,16 @@ Response:
 - 成功类型：`status` 为 `created` 或 `updated`（当 override 开启且找到相同学号时为 `updated`）
 - 新队员即获得登陆账号，初始默认密码为：ChangeMe123!
 
-##### 覆盖导入（override）
+###### D.1.1.1 覆盖导入（override）
 - 可选字段：`override`（`1/0`、`true/false`、`yes/no`；默认不覆盖）
 - 当 `override=true` 时：若导入行学号已存在，将对该成员执行“选择性更新”——仅更新导入行中非空字段；导入行为空的字段不会覆盖原有非空值。
 - 返回 `rows[].status` 可能为：`created`、`updated`、`error`。
 
-#### 导出队员信息
+##### D.1.2 导出队员信息
 - 下载：`GET /api/v1/members/export/`
 - 说明：导出当前筛选条件下的队员信息（Excel .xlsx）。支持与列表相同的查询参数（如 `name__icontains`、`user_id`、`voice_part`、`tier`、`birthday_month`）。
 
-#### 获取队员列表
+##### D.1.3 获取队员列表
 ```
 GET /api/v1/members?page=1&page_size=20&voice_part=T1&tier=一队&search=张三&birthday_month=9
 Authorization: Bearer <token>
@@ -1724,7 +1703,7 @@ Response:
 }
 ```
 
-#### 获取队员详细信息
+##### D.1.4 获取队员详细信息
 ```
 GET /api/v1/members/{user_id}
 Authorization: Bearer <token>
@@ -1743,7 +1722,7 @@ Response:
 }
 ```
 
-#### 更新队员信息
+##### D.1.5 更新队员信息
 ```
 PUT /api/v1/members/{user_id}
 Authorization: Bearer <token>
@@ -1764,7 +1743,7 @@ Response:
 }
 ```
 
-#### 删除队员档案（仅管理员）
+##### D.1.6 删除队员档案（仅管理员）
 ```
 DELETE /api/v1/members/{user_id}
 Authorization: Bearer <token>
@@ -1776,9 +1755,9 @@ Response:
 }
 ```
 
-### 6. 外请教师管理 API
+#### D.2 外请教师管理 API
 
-#### 创建教师信息
+##### D.2.1 创建教师信息
 ```
 POST /api/v1/instructors
 Authorization: Bearer <token>
@@ -1807,7 +1786,7 @@ Response:
 }
 ```
 
-#### 获取教师列表
+##### D.2.2 获取教师列表
 ```
 GET /api/v1/instructors?page=1&page_size=20&search=李老师
 Authorization: Bearer <token>
@@ -1832,7 +1811,7 @@ Response:
 }
 ```
 
-#### 更新教师信息
+##### D.2.3 更新教师信息
 ```
 PUT /api/v1/instructors/{instructor_id}
 Authorization: Bearer <token>
@@ -1851,9 +1830,9 @@ Response:
 }
 ```
 
-### 7. 谱务管理 API
+#### D.3 谱务管理 API
 
-#### 上传乐谱（仅管理员）
+##### D.3.1 上传乐谱（仅管理员）
 ```
 POST /api/v1/sheets
 Authorization: Bearer <token>
@@ -1881,10 +1860,9 @@ Response:
 }
 ```
 
-#### 获取乐谱列表（公开可读）
+##### D.3.2 获取乐谱列表（公开可读）
 ```
 GET /api/v1/sheets?page=1&page_size=20&search=青春&composer=王洛宾
-
 
 Response:
 {
@@ -1909,10 +1887,9 @@ Response:
 }
 ```
 
-#### 获取乐谱详情（公开可读）
+##### D.3.3 获取乐谱详情（公开可读）
 ```
 GET /api/v1/sheets/{sheet_id}
-
 
 Response:
 {
@@ -1931,7 +1908,7 @@ Response:
 }
 ```
 
-#### 下载乐谱（带水印 - 异步处理）
+##### D.3.4 下载乐谱（带水印 - 异步处理）
 
 乐谱下载采用异步任务处理，避免大文件水印生成阻塞服务器。
 
@@ -2070,9 +2047,8 @@ const pollTask = async () => {
 
 pollTask()
 ```
-```
 
-#### 更新乐谱信息（仅管理员）
+##### D.3.5 更新乐谱信息（仅管理员）
 ```
 PUT /api/v1/sheets/{sheet_id}
 Authorization: Bearer <token>
@@ -2091,7 +2067,7 @@ Response:
 }
 ```
 
-#### 删除乐谱（仅管理员）
+##### D.3.6 删除乐谱（仅管理员）
 ```
 DELETE /api/v1/sheets/{sheet_id}
 Authorization: Bearer <token>
@@ -2103,7 +2079,7 @@ Response:
 }
 ```
 
-### 8. 错误码说明
+#### D.4 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -2117,9 +2093,9 @@ Response:
 | 422 | 数据验证失败 |
 | 500 | 服务器内部错误 |
 
-## 五、系统目录结构设计
+### E. 系统目录结构补充
 
-### 1. 后端目录结构（Django项目）
+#### E.1 后端目录结构（Django项目）
 
 ```
 tacos_backend/
@@ -2216,7 +2192,7 @@ tacos_backend/
     └── database.md              # 数据库设计文档
 ```
 
-### 2. 前端目录结构（Vue.js项目）
+#### E.2 前端目录结构（Vue.js项目）
 
 ```
 tacos_frontend/
@@ -2318,9 +2294,9 @@ tacos_frontend/
     └── deployment.md           # 部署指南
 ```
 
-### 3. 数据库设计补充说明
+#### E.3 数据库设计补充说明
 
-#### 3.1 索引设计
+##### E.3.1 索引设计
 ```sql
 -- users表索引
 CREATE INDEX idx_users_role ON users(role);
@@ -2341,7 +2317,7 @@ CREATE INDEX idx_sheets_upload_time ON sheets(upload_time);
 CREATE INDEX idx_members_voice_tier ON members(voice_part, tier);
 ```
 
-#### 3.2 数据库连接池配置
+##### E.3.2 数据库连接池配置
 ```python
 # Django settings.py
 DATABASES = {
@@ -2360,14 +2336,14 @@ DATABASES = {
 }
 ```
 
-### 4. 部署架构
+#### E.4 部署架构
 （一般不会用Docker部署TaCOS，没有必要）
-#### 4.1 开发环境
+##### E.4.1 开发环境
 ```
 开发者本地 → Django开发服务器(8000) + Vue开发服务器(3000)
 ```
 
-#### 4.2 生产环境
+##### E.4.2 生产环境
 ```
 用户 → Nginx → Gunicorn → Django应用
      → Nginx → 静态文件(Vue构建产物)
@@ -2376,7 +2352,7 @@ DATABASES = {
      → 文件存储(阿里云OSS/腾讯云COS)
 ```
 
-#### 4.3 Docker部署配置
+##### E.4.3 Docker部署配置
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -2411,3 +2387,7 @@ services:
 volumes:
   postgres_data:
 ```
+
+**文档最后更新**: 2026-05-27
+**文档版本**: v2.1.0
+**维护者**: TaCOS开发团队
