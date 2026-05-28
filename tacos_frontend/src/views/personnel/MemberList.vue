@@ -353,57 +353,6 @@ export default {
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
-    const STATUS_ORDER = { ACTIVE: 0, ALUMNI: 1, INACTIVE: 2 }
-    const TIER_ORDER = { 一队: 0, 二队: 1 }
-    const VOICE_PART_ORDER = { S1: 0, S2: 1, A1: 2, A2: 3, T1: 4, T2: 5, B1: 6, B2: 7, Other: 8 }
-    const nameCollator = new Intl.Collator(['zh-Hans-u-co-pinyin', 'zh-Hans', 'zh-CN', 'en'], {
-      sensitivity: 'base',
-      numeric: true
-    })
-
-    const compareMembers = (a, b) => {
-      const statusA = Object.prototype.hasOwnProperty.call(STATUS_ORDER, a.status)
-        ? STATUS_ORDER[a.status]
-        : 99
-      const statusB = Object.prototype.hasOwnProperty.call(STATUS_ORDER, b.status)
-        ? STATUS_ORDER[b.status]
-        : 99
-      if (statusA !== statusB) {
-        return statusA - statusB
-      }
-
-      const tierA = Object.prototype.hasOwnProperty.call(TIER_ORDER, a.tier)
-        ? TIER_ORDER[a.tier]
-        : 99
-      const tierB = Object.prototype.hasOwnProperty.call(TIER_ORDER, b.tier)
-        ? TIER_ORDER[b.tier]
-        : 99
-      if (tierA !== tierB) {
-        return tierA - tierB
-      }
-
-      const vpA = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, a.voice_part)
-        ? VOICE_PART_ORDER[a.voice_part]
-        : 99
-      const vpB = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, b.voice_part)
-        ? VOICE_PART_ORDER[b.voice_part]
-        : 99
-      if (vpA !== vpB) {
-        return vpA - vpB
-      }
-
-      const nameA = (a.name || '').toString()
-      const nameB = (b.name || '').toString()
-      const nameCmp = nameCollator.compare(nameA, nameB)
-      if (nameCmp !== 0) {
-        return nameCmp
-      }
-
-      const idA = (a.user_id || '').toString()
-      const idB = (b.user_id || '').toString()
-      return idA.localeCompare(idB)
-    }
-
     const getVoicePartType = voicePart => {
       const typeMap = {
         S1: 'danger',
@@ -561,9 +510,8 @@ export default {
     )
 
     const tableData = computed(() => {
-      const sorted = [...(allMembers.value || [])].sort(compareMembers)
       const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return sorted.slice(start, start + urlState.value.pageSize)
+      return (allMembers.value || []).slice(start, start + urlState.value.pageSize)
     })
 
     const totalPages = computed(() => {

@@ -372,7 +372,7 @@ export default {
     const queryMembers = async query => {
       loadingMembers.value = true
       try {
-        const params = { page_size: 1000, ordering: 'id' }
+        const params = { page_size: 1000 }
         const q = query && String(query).trim()
         if (q) {
           // 用 user_id 模糊匹配；或用姓名模糊匹配
@@ -385,10 +385,14 @@ export default {
         const res = await getMemberList(params)
         const fetched = res.data?.results || res.data || []
         const mergedMap = new Map()
-        if (!q) {
-          ;(selectedSeed.value || []).forEach(m => mergedMap.set(m.id, m))
-        }
         fetched.forEach(m => mergedMap.set(m.id, m))
+        if (!q) {
+          ;(selectedSeed.value || []).forEach(m => {
+            if (!mergedMap.has(m.id)) {
+              mergedMap.set(m.id, m)
+            }
+          })
+        }
         memberOptions.value = Array.from(mergedMap.values())
       } finally {
         loadingMembers.value = false
@@ -406,7 +410,7 @@ export default {
       let page = 1
       let results = []
       let total = 0
-      const first = await getMemberList({ tier, page, page_size: pageSize, ordering: 'id' })
+      const first = await getMemberList({ tier, page, page_size: pageSize })
       const firstData = first && first.data ? first.data : first
       const firstResults = firstData?.results || firstData || []
       results = results.concat(firstResults)
@@ -417,7 +421,7 @@ export default {
       const totalPages = Math.max(1, Math.ceil(total / pageSize))
       while (page < totalPages) {
         page += 1
-        const res = await getMemberList({ tier, page, page_size: pageSize, ordering: 'id' })
+        const res = await getMemberList({ tier, page, page_size: pageSize })
         const data = res && res.data ? res.data : res
         const items = data?.results || data || []
         results = results.concat(items)

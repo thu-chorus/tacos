@@ -25,11 +25,12 @@ from .serializers import (
     MemberTitleSerializer,
     TitleSerializer,
 )
+from .sorting import member_sort_key, sort_instructors, sort_members
 from .tasks import update_birthday_title_for_month
 
 
 class MemberViewSet(EnvelopeModelViewSet):
-    queryset = Member.objects.select_related("user").all().order_by("-name")
+    queryset = Member.objects.select_related("user").all()
     serializer_class = MemberSerializer
     filterset_class = MemberFilter
     search_fields = ["name"]
@@ -49,47 +50,7 @@ class MemberViewSet(EnvelopeModelViewSet):
         """
         qs = self.filter_queryset(self.get_queryset())
 
-        status_rank_map = {
-            MemberStatus.ACTIVE: 0,
-            MemberStatus.ALUMNI: 1,
-            MemberStatus.INACTIVE: 2,
-        }
-        tier_rank_map = {"一队": 0, "二队": 1}
-        voice_rank_map = {
-            "S1": 0,
-            "S2": 1,
-            "A1": 2,
-            "A2": 3,
-            "T1": 4,
-            "T2": 5,
-            "B1": 6,
-            "B2": 7,
-            "Other": 8,
-        }
-
-        def name_pinyin_key(name: str) -> str:
-            if not name:
-                return ""
-            try:
-                from pypinyin import Style, lazy_pinyin  # type: ignore
-
-                pinyin_list = lazy_pinyin(
-                    str(name), style=Style.NORMAL, errors="default"
-                )
-                return "".join(pinyin_list)
-            except Exception:
-                return str(name).lower()
-
-        items = list(qs)
-        items.sort(
-            key=lambda m: (
-                status_rank_map.get(getattr(m, "status", ""), 99),
-                tier_rank_map.get(getattr(m, "tier", ""), 99),
-                voice_rank_map.get(getattr(m, "voice_part", ""), 99),
-                name_pinyin_key(getattr(m, "name", "")),
-                str(getattr(getattr(m, "user", None), "user_id", "")),
-            )
-        )
+        items = sort_members(qs)
 
         page = self.paginate_queryset(items)
         if page is not None:
@@ -471,12 +432,26 @@ class MemberViewSet(EnvelopeModelViewSet):
 
 
 class InstructorViewSet(EnvelopeModelViewSet):
-    queryset = Instructor.objects.all().order_by("-created_at")
+    queryset = Instructor.objects.all()
     serializer_class = InstructorSerializer
     filterset_class = InstructorFilter
     search_fields = ["name"]
     permission_classes = [IsAdmin]
     lookup_field = "public_id"
+
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        """默认按教师姓名拼音排序，显式 ordering 参数仍交给 DRF 处理。"""
+        if request.query_params.get("ordering"):
+            return super().list(request, *args, **kwargs)
+
+        qs = self.filter_queryset(self.get_queryset())
+        items = sort_instructors(qs)
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
 
 class AlumniProfileViewSet(EnvelopeModelViewSet):
@@ -503,6 +478,16 @@ class AlumniProfileViewSet(EnvelopeModelViewSet):
         if member:
             return qs.filter(member=member)
         return qs.none()
+
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        qs = self.filter_queryset(self.get_queryset())
+        items = sorted(list(qs), key=lambda profile: member_sort_key(profile.member))
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer: AlumniProfileSerializer) -> None:  # type: ignore[override]
         serializer.save()

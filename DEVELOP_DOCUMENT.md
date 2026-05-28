@@ -50,6 +50,8 @@
 - 成员状态主要由管理员维护，不根据毕业时间自动转换。
 - `Member.status` 支持 `ACTIVE`、`ALUMNI`、`INACTIVE`。
 - 队员列表明确展示成员状态，并按 `ACTIVE`、`ALUMNI`、`INACTIVE` 优先排序。
+- 成员相关列表复用统一排序：状态、梯队、声部、姓名拼音、学号；活动管理员、参与成员、签到统计、作业全员列表和成员导出均遵循该顺序。
+- 乐谱列表和活动关联乐谱按曲名拼音排序，外请教师按姓名拼音排序。
 - 成员切换为 `ALUMNI` 后创建 `AlumniProfile`，用于当前城市、行业、单位、职位、毕业时间、简介、备注和开放联系开关；微信、电话、邮箱沿用 `Member` 档案字段。`Member.graduate_month` 仍表示预计毕业时间，管理员创建成员时可暂空，用户首次登录补全时必填；`AlumniProfile.graduation_month` 表示校友毕业时间且保存时必填。
 - 活动增加 `visible_to_alumni`，校友只看到显式开放给校友的活动，并可报名这些活动。
 - 校友只能担任 `visible_to_alumni=true` 活动的活动管理员。
