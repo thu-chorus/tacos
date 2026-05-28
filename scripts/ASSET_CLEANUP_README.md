@@ -392,7 +392,6 @@ local expected_tables=("assignment_attachments" "assignment_submission_attachmen
 
 ## 📚 相关文档
 
-- [备份恢复指南](BACKUP_README.md) - 完整的备份和恢复操作
-- [PostgreSQL 备份指南](../POSTGRESQL_BACKUP_GUIDE.md) - PostgreSQL 专项备份指南
+- [备份恢复指南](BACKUP_README.md) - 包含 SQLite 和 PostgreSQL 备份说明
 - [代码格式化指南](FORMATTING_GUIDE.md) - 代码格式化工具使用
 - [脚本总览](README.md) - 所有脚本的使用说明

@@ -1,6 +1,9 @@
+import os
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.text import get_valid_filename
 
 from apps.common.validators import validate_china_mainland_phone, validate_year_month
 
@@ -19,6 +22,15 @@ def default_member_hidden_fields() -> list[str]:
         "political_affiliation",
         "graduate_month",
     ]
+
+
+def member_avatar_upload_to(instance: "Member", filename: str) -> str:
+    """成员头像上传路径。"""
+    base, ext = os.path.splitext(filename or "")
+    safe_base = get_valid_filename(base or "avatar")[:48] or "avatar"
+    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+    public_id = getattr(instance, "public_id", "") or "pending"
+    return f"members/avatars/{public_id}/{timestamp}_{safe_base}{ext.lower()}"
 
 
 class VoicePart(models.TextChoices):
@@ -52,6 +64,7 @@ class Member(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="member"
     )
 
+    avatar = models.ImageField(upload_to=member_avatar_upload_to, blank=True, null=True)
     name = models.CharField(max_length=64)
     gender = models.CharField(
         max_length=2, choices=(("男", "男"), ("女", "女")), blank=True, default=""

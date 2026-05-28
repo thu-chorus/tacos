@@ -5,7 +5,23 @@
         <div class="header" style="margin-bottom: 5px"></div>
 
         <div class="profile-header">
-          <div class="avatar">{{ initials }}</div>
+          <div class="avatar" :class="{ 'avatar-clickable': memberInfo.avatar }">
+            <el-image
+              v-if="memberInfo.avatar"
+              class="avatar-image"
+              :src="memberInfo.avatar"
+              :preview-src-list="[memberInfo.avatar]"
+              :initial-index="0"
+              fit="cover"
+              preview-teleported
+              alt="头像"
+            >
+              <template #error>
+                <span>{{ initials }}</span>
+              </template>
+            </el-image>
+            <span v-else>{{ initials }}</span>
+          </div>
           <div class="meta">
             <div class="name">{{ memberInfo.name || '未命名' }}</div>
             <div class="tags">
@@ -159,7 +175,7 @@
             <div class="summary-value">{{ displayAlumniValue(alumniProfile.industry) }}</div>
           </div>
           <div class="alumni-summary-item">
-            <div class="summary-label">公司 / 职位</div>
+            <div class="summary-label">单位 / 职位</div>
             <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
           </div>
         </div>
@@ -379,6 +395,23 @@ export default {
   justify-content: center;
   font-size: 28px;
   font-weight: 700;
+  overflow: hidden;
+}
+.avatar-clickable {
+  cursor: zoom-in;
+}
+.avatar-clickable :deep(.el-image__inner) {
+  cursor: zoom-in;
+}
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #fff;
+}
+.avatar-image :deep(.el-image__inner) {
+  background: #fff;
 }
 .meta {
   flex: 1;

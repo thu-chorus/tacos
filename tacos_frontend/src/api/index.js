@@ -289,12 +289,14 @@ export const request = {
     return service.delete(url, { ...config })
   },
 
-  upload(url, formData, onProgress) {
+  upload(url, formData, onProgress, config = {}) {
     return service.post(url, formData, {
+      ...config,
       headers: {
+        ...(config.headers || {}),
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: onProgress
+      onUploadProgress: onProgress || config.onUploadProgress
     })
   }
 }
