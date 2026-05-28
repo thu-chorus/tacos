@@ -8,14 +8,12 @@
 
       <form class="login-form" @submit.prevent="handleLogin" novalidate>
         <div class="form-item">
-          <label class="form-label" for="user_id">学号</label>
+          <label class="form-label" for="user_id">学号 / 工号</label>
           <div class="input-wrapper">
             <input
               id="user_id"
               v-model="loginForm.user_id"
-              placeholder="请输入学号"
-              inputmode="numeric"
-              pattern="\\d{10}"
+              placeholder="请输入学号或工号"
               class="input-modern"
               autocomplete="username"
               required
@@ -100,8 +98,8 @@ export default {
         fieldErrors.user_id = ''
         fieldErrors.password = ''
 
-        if (!/^\d{10}$/.test(loginForm.user_id)) {
-          fieldErrors.user_id = '学号应为10位数字'
+        if (!loginForm.user_id || !loginForm.user_id.trim()) {
+          fieldErrors.user_id = '请输入学号或工号'
           return
         }
         if (!loginForm.password || loginForm.password.length < 6) {
@@ -115,9 +113,12 @@ export default {
 
         notify.success('登录成功')
 
-        // 检查是否是首次登录
-        if (response.data && response.data.is_first_login) {
-          notify.info('检测到您是首次登录，请完善个人信息并修改密码')
+        const data = response.data || {}
+        if (data.is_first_login || data.needs_profile_setup) {
+          const message = data.needs_profile_setup
+            ? '当前账号还没有成员档案，请先完善个人信息'
+            : '检测到您是首次登录，请完善个人信息并修改密码'
+          notify.info(message)
           router.push('/first-login')
           return
         }
@@ -143,7 +144,7 @@ export default {
             loginFormRef.value?.clearValidate()
             // 聚焦到学号输入框
             setTimeout(() => {
-              const userIdInput = document.querySelector('input[placeholder="请输入学号"]')
+              const userIdInput = document.querySelector('#user_id')
               if (userIdInput) {
                 userIdInput.focus()
               }

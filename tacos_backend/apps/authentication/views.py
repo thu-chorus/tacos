@@ -1,3 +1,4 @@
+from django.contrib.auth.models import update_last_login
 from django.http import JsonResponse
 
 from rest_framework.decorators import api_view, permission_classes
@@ -10,6 +11,7 @@ from apps.common.utils import envelope_error, envelope_ok
 from apps.personnel.models import Member
 from apps.personnel.serializers import MemberSerializer
 
+from .policies import user_is_first_login, user_needs_profile_setup
 from .serializers import (
     ChangePasswordSerializer,
     FirstLoginSerializer,
@@ -61,11 +63,11 @@ def login(request: Request) -> JsonResponse:
 
     user = serializer.validated_data["user"]
 
-    # 检查是否是首次登录（使用默认密码）
-    from django.conf import settings
+    # 首次登录和档案补全都在前端强制跳转到 /first-login。
+    is_first_login = user_is_first_login(user)
+    needs_profile_setup = user_needs_profile_setup(user)
 
-    default_password = getattr(settings, "DEFAULT_INITIAL_PASSWORD", "ChangeMe123!")
-    is_first_login = user.check_password(default_password)
+    update_last_login(None, user)
 
     refresh = RefreshToken.for_user(user)
     data = {
@@ -73,6 +75,7 @@ def login(request: Request) -> JsonResponse:
         "refresh_token": str(refresh),
         "user": UserSerializer(user).data,
         "is_first_login": is_first_login,
+        "needs_profile_setup": needs_profile_setup,
     }
     return JsonResponse(envelope_ok(data), status=200)
 

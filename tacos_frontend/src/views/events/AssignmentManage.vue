@@ -396,43 +396,6 @@ export default {
     const page = ref(1)
     const pageSize = ref(20)
 
-    const TIER_ORDER = { 一队: 0, 二队: 1 }
-    const VOICE_PART_ORDER = { S1: 0, S2: 1, A1: 2, A2: 3, T1: 4, T2: 5, B1: 6, B2: 7, Other: 8 }
-    const nameCollator = new Intl.Collator(['zh-Hans-u-co-pinyin', 'zh-Hans', 'zh-CN', 'en'], {
-      sensitivity: 'base',
-      numeric: true
-    })
-
-    const compareMembers = (a, b) => {
-      const tierA = Object.prototype.hasOwnProperty.call(TIER_ORDER, a.tier)
-        ? TIER_ORDER[a.tier]
-        : 99
-      const tierB = Object.prototype.hasOwnProperty.call(TIER_ORDER, b.tier)
-        ? TIER_ORDER[b.tier]
-        : 99
-      if (tierA !== tierB) {
-        return tierA - tierB
-      }
-      const vpA = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, a.voice_part)
-        ? VOICE_PART_ORDER[a.voice_part]
-        : 99
-      const vpB = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, b.voice_part)
-        ? VOICE_PART_ORDER[b.voice_part]
-        : 99
-      if (vpA !== vpB) {
-        return vpA - vpB
-      }
-      const nameA = (a.member_name || '').toString()
-      const nameB = (b.member_name || '').toString()
-      const nameCmp = nameCollator.compare(nameA, nameB)
-      if (nameCmp !== 0) {
-        return nameCmp
-      }
-      const idA = (a.member_user_id || '').toString()
-      const idB = (b.member_user_id || '').toString()
-      return idA.localeCompare(idB)
-    }
-
     const isClosed = computed(() => {
       try {
         return (
@@ -500,7 +463,7 @@ export default {
           _loading: false
         }))
 
-        allRows.value = mappedRows.sort(compareMembers)
+        allRows.value = mappedRows
         total.value = allRows.value.length
 
         const maxPage = Math.max(1, Math.ceil(total.value / pageSize.value) || 1)

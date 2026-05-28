@@ -532,7 +532,7 @@ export default {
     const queryMembers = async query => {
       loadingMemberOptions.value = true
       try {
-        const params = { page_size: 1000, ordering: 'user_id' }
+        const params = { page_size: 1000 }
         const q = query && String(query).trim()
         if (q) {
           if (/^\d+$/.test(q)) {

@@ -4,15 +4,15 @@
       <div class="card-content">
         <div class="header" style="margin-bottom: 20px">
           <h3>{{ isEdit ? '编辑队员' : '新增队员' }}</h3>
-          <button
-            v-if="!isEdit && isAdmin"
-            class="btn-modern primary"
-            style="margin-left: auto"
-            type="button"
-            @click="showBulkDialog = true"
-          >
-            批量新增
-          </button>
+          <div v-if="!isEdit && isAdmin" class="actions">
+            <button
+              class="btn-modern primary sm-btn bulk-create-button"
+              type="button"
+              @click="showBulkDialog = true"
+            >
+              批量新增
+            </button>
+          </div>
         </div>
         <el-form
           ref="formRef"
@@ -266,7 +266,12 @@
           <el-row :gutter="24">
             <el-col :xs="24" :sm="12">
               <el-form-item label="梯队">
-                <el-select v-model="formData.tier" placeholder="请选择梯队" style="width: 100%">
+                <el-select
+                  v-model="formData.tier"
+                  placeholder="请选择梯队"
+                  style="width: 100%"
+                  :disabled="!isAdmin"
+                >
                   <el-option label="一队" value="一队" />
                   <el-option label="二队" value="二队" />
                 </el-select>
@@ -750,9 +755,10 @@ export default {
           const updatePayload = { ...rest, hometown: formData.hometown }
           if (!isAdmin.value) {
             delete updatePayload.status
+            delete updatePayload.tier
           }
           const lookupId = route.params.id
-          await updateMember(lookupId, updatePayload)
+          await updateMember(lookupId, updatePayload, { skipErrorMessage: true })
           notify.success('队员信息更新成功')
           // 编辑保存后导航
           const refParam = route.query.ref
@@ -791,17 +797,16 @@ export default {
         }
       } catch (error) {
         console.error('Submit error:', error)
-        // 尝试从后端校验错误中提取详细提示
         const resp = error && error.response
         const data = resp && resp.data
+        const details = data && data.data ? data.data : data
         let message = '操作失败'
-        if (data && typeof data === 'object' && !data.message) {
-          // DRF校验错误通常是 { field: [msg...] }
-          const details = Object.entries(data)
+        if (details && typeof details === 'object' && !Array.isArray(details)) {
+          const detailText = Object.entries(details)
             .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join('; ') : String(v)}`)
             .join(' | ')
-          if (details) {
-            message = details
+          if (detailText) {
+            message = detailText
           }
         } else if (data && data.message) {
           message = data.message
@@ -856,6 +861,29 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h3 {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bulk-create-button {
+  min-width: 72px;
+  white-space: nowrap;
+}
+
 /* 下拉框宽度优化，保持与 Profile 一致 */
 ::deep(.wide-select-dropdown) {
   .el-select-dropdown__item {

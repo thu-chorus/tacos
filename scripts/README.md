@@ -85,10 +85,8 @@ scripts/
 **为什么需要这些服务？**
 - **Django**: Web API 服务器，处理 HTTP 请求
 - **Celery Worker**: 异步处理耗时任务（PDF 水印生成、Excel 导出）
-- **Celery Beat**: 定时执行任务（每小时清理过期文件、每月更新寿星称号）
+- **Celery Beat**: 定时执行任务（每小时清理过期文件、每天停用超过 6 个月未登录的在队成员、每月更新寿星称号）
 - **Redis**: 消息队列，连接 Django 和 Celery
-
----
 
 #### `start_frontend.sh`
 启动前端开发服务器
@@ -127,8 +125,6 @@ scripts/
 - 需要 Node.js >= 20.0.0
 - 默认运行在 `http://localhost:3000`
 - 可以自定义后端 API 地址
-
----
 
 ### 💾 备份与恢复
 
@@ -183,8 +179,6 @@ scripts/
 - 需要安装 `pg_dump` 命令
 - 在 `.env.production.local` 中配置 `DATABASE_URL=postgres://user:pass@host:port/dbname`
 
----
-
 #### `restore_tacos.sh`
 从备份恢复系统（支持SQLite和PostgreSQL）
 
@@ -232,8 +226,6 @@ scripts/
 - 优先使用 `db_backup.dump` (pg_restore)
 - 备选使用 `db_dump.sql.gz` (psql)
 
----
-
 ### 🧹 资源清理
 
 #### `cleanup_unused_assets.sh`
@@ -276,8 +268,6 @@ scripts/
 - 删除前会自动生成文件列表
 - 使用 `--backup` 选项可以在删除前备份文件
 
----
-
 ### 🎨 代码格式化
 
 #### `format_code.sh`
@@ -302,8 +292,6 @@ scripts/
 **注意事项：**
 - 提交代码前建议运行此脚本
 - 会自动跳过虚拟环境和 node_modules
-
----
 
 ## 🔧 常见问题
 
@@ -335,8 +323,6 @@ chmod +x scripts/*.sh
 0 2 * * * cd /path/to/tacos && ./scripts/backup_tacos.sh --cleanup
 ```
 
----
-
 ## 📚 相关文档
 
 - [项目主 README](../README.md)
@@ -345,8 +331,6 @@ chmod +x scripts/*.sh
 - [资源清理说明](ASSET_CLEANUP_README.md)
 - [代码格式化指南](FORMATTING_GUIDE.md)
 - [系统部署文档](../SYSTEMD_DEPLOYMENT.md)
-
----
 
 ## 💡 最佳实践
 

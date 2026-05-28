@@ -255,35 +255,6 @@ export default {
     const totalCount = ref(0)
     const allSheets = ref([])
 
-    const titleCollator = new Intl.Collator(['zh-Hans-u-co-pinyin', 'zh-Hans', 'zh-CN', 'en'], {
-      sensitivity: 'base',
-      numeric: true
-    })
-
-    const hasChinese = str => {
-      if (!str) {
-        return false
-      }
-      return /[\u4e00-\u9fa5]/.test(str)
-    }
-
-    const compareSheets = (a, b) => {
-      const titleA = (a.title || '').toString()
-      const titleB = (b.title || '').toString()
-
-      const hasChineseA = hasChinese(titleA)
-      const hasChineseB = hasChinese(titleB)
-
-      if (hasChineseA && !hasChineseB) {
-        return -1
-      }
-      if (!hasChineseA && hasChineseB) {
-        return 1
-      }
-
-      return titleCollator.compare(titleA, titleB)
-    }
-
     const loadData = async () => {
       loading.value = true
       try {
@@ -448,9 +419,8 @@ export default {
     })
 
     const tableData = computed(() => {
-      const sorted = [...(allSheets.value || [])].sort(compareSheets)
       const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return sorted.slice(start, start + urlState.value.pageSize)
+      return (allSheets.value || []).slice(start, start + urlState.value.pageSize)
     })
 
     return {

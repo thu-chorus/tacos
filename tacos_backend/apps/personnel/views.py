@@ -1,7 +1,9 @@
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 
+from PIL import Image, UnidentifiedImageError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -23,11 +25,12 @@ from .serializers import (
     MemberTitleSerializer,
     TitleSerializer,
 )
+from .sorting import member_sort_key, sort_instructors, sort_members
 from .tasks import update_birthday_title_for_month
 
 
 class MemberViewSet(EnvelopeModelViewSet):
-    queryset = Member.objects.select_related("user").all().order_by("-name")
+    queryset = Member.objects.select_related("user").all()
     serializer_class = MemberSerializer
     filterset_class = MemberFilter
     search_fields = ["name"]
@@ -36,7 +39,7 @@ class MemberViewSet(EnvelopeModelViewSet):
 
     def get_permissions(self):  # type: ignore[override]
         """更新成员时使用本人或管理员权限，其余操作使用默认成员权限。"""
-        if self.action in ("update", "partial_update"):
+        if self.action in ("update", "partial_update", "avatar"):
             return [IsSelfOrAdmin()]
         return super().get_permissions()
 
@@ -47,47 +50,7 @@ class MemberViewSet(EnvelopeModelViewSet):
         """
         qs = self.filter_queryset(self.get_queryset())
 
-        status_rank_map = {
-            MemberStatus.ACTIVE: 0,
-            MemberStatus.ALUMNI: 1,
-            MemberStatus.INACTIVE: 2,
-        }
-        tier_rank_map = {"一队": 0, "二队": 1}
-        voice_rank_map = {
-            "S1": 0,
-            "S2": 1,
-            "A1": 2,
-            "A2": 3,
-            "T1": 4,
-            "T2": 5,
-            "B1": 6,
-            "B2": 7,
-            "Other": 8,
-        }
-
-        def name_pinyin_key(name: str) -> str:
-            if not name:
-                return ""
-            try:
-                from pypinyin import Style, lazy_pinyin  # type: ignore
-
-                pinyin_list = lazy_pinyin(
-                    str(name), style=Style.NORMAL, errors="default"
-                )
-                return "".join(pinyin_list)
-            except Exception:
-                return str(name).lower()
-
-        items = list(qs)
-        items.sort(
-            key=lambda m: (
-                status_rank_map.get(getattr(m, "status", ""), 99),
-                tier_rank_map.get(getattr(m, "tier", ""), 99),
-                voice_rank_map.get(getattr(m, "voice_part", ""), 99),
-                name_pinyin_key(getattr(m, "name", "")),
-                str(getattr(getattr(m, "user", None), "user_id", "")),
-            )
-        )
+        items = sort_members(qs)
 
         page = self.paginate_queryset(items)
         if page is not None:
@@ -110,6 +73,57 @@ class MemberViewSet(EnvelopeModelViewSet):
 
         total = SystemStats.get_solo().total_members
         return Response({"total_members": total})
+
+    @action(
+        methods=["post", "delete"],
+        detail=True,
+        url_path="avatar",
+        permission_classes=[IsAuthenticated],
+    )
+    def avatar(self, request, public_id=None):
+        """上传或删除成员头像。"""
+        member: Member = self.get_object()
+
+        if request.method == "DELETE":
+            old_name = getattr(member.avatar, "name", "")
+            member.avatar = None
+            member.save(update_fields=["avatar", "updated_at"])
+            if old_name:
+                default_storage.delete(old_name)
+            return Response(self.get_serializer(member).data)
+
+        upload = request.FILES.get("avatar") or request.FILES.get("file")
+        if not upload:
+            return Response(envelope_error(422, "请上传头像文件", {}), status=422)
+
+        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        content_type = getattr(upload, "content_type", "") or ""
+        if content_type and content_type not in allowed_types:
+            return Response(
+                envelope_error(422, "仅支持 JPG/PNG/WebP 头像", {}), status=422
+            )
+
+        max_size = 2 * 1024 * 1024
+        if getattr(upload, "size", 0) > max_size:
+            return Response(envelope_error(422, "头像大小不能超过2MB", {}), status=422)
+
+        try:
+            image = Image.open(upload)
+            image.verify()
+        except (UnidentifiedImageError, OSError):
+            return Response(envelope_error(422, "头像文件不是有效图片", {}), status=422)
+        finally:
+            try:
+                upload.seek(0)
+            except Exception:
+                pass
+
+        old_name = getattr(member.avatar, "name", "")
+        member.avatar = upload
+        member.save(update_fields=["avatar", "updated_at"])
+        if old_name and old_name != getattr(member.avatar, "name", ""):
+            default_storage.delete(old_name)
+        return Response(self.get_serializer(member).data)
 
     def create(self, request, *args, **kwargs):  # type: ignore[override]
         serializer = self.get_serializer(data=request.data)
@@ -418,12 +432,26 @@ class MemberViewSet(EnvelopeModelViewSet):
 
 
 class InstructorViewSet(EnvelopeModelViewSet):
-    queryset = Instructor.objects.all().order_by("-created_at")
+    queryset = Instructor.objects.all()
     serializer_class = InstructorSerializer
     filterset_class = InstructorFilter
     search_fields = ["name"]
     permission_classes = [IsAdmin]
     lookup_field = "public_id"
+
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        """默认按教师姓名拼音排序，显式 ordering 参数仍交给 DRF 处理。"""
+        if request.query_params.get("ordering"):
+            return super().list(request, *args, **kwargs)
+
+        qs = self.filter_queryset(self.get_queryset())
+        items = sort_instructors(qs)
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
 
 class AlumniProfileViewSet(EnvelopeModelViewSet):
@@ -450,6 +478,16 @@ class AlumniProfileViewSet(EnvelopeModelViewSet):
         if member:
             return qs.filter(member=member)
         return qs.none()
+
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        qs = self.filter_queryset(self.get_queryset())
+        items = sorted(list(qs), key=lambda profile: member_sort_key(profile.member))
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer: AlumniProfileSerializer) -> None:  # type: ignore[override]
         serializer.save()

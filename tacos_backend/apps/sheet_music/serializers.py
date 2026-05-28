@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from apps.events.models import Event
 from apps.personnel.models import Member
+from apps.personnel.sorting import sort_members
 
 from .models import Sheet, SheetDownloadLog, SheetDownloadTask
 
@@ -104,7 +105,9 @@ class SheetSerializer(serializers.ModelSerializer):
         try:
             return [
                 {"id": getattr(e, "public_id", ""), "name": e.name}
-                for e in obj.visible_events.all()
+                for e in obj.visible_events.order_by(
+                    "-start_date", "-created_at", "public_id"
+                )
             ]
         except Exception:
             return []
@@ -117,7 +120,7 @@ class SheetSerializer(serializers.ModelSerializer):
                     "user_id": getattr(m.user, "user_id", ""),
                     "name": m.name,
                 }
-                for m in obj.visible_members.all()
+                for m in sort_members(obj.visible_members.select_related("user").all())
             ]
         except Exception:
             return []

@@ -30,7 +30,7 @@ pre-commit run --all-files
 
 注意：pre-commit 与 CI 无关，仅在本地开发者环境触发。建议所有开发者都执行一次 `pre-commit install`。
 
-### 方式一：使用格式化脚本（推荐）
+### 方式二：使用格式化脚本
 
 ```bash
 chmod +x format_code.sh

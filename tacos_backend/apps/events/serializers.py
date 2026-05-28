@@ -7,7 +7,9 @@ from django.contrib.auth.hashers import check_password, make_password
 from rest_framework import serializers
 
 from apps.personnel.models import Member, MemberStatus
+from apps.personnel.sorting import sort_members
 from apps.sheet_music.models import Sheet
+from apps.sheet_music.sorting import sort_sheets
 
 from .models import (
     Assignment,
@@ -53,10 +55,8 @@ class EventSerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
-    admins_detail = MemberBriefSerializer(source="admins", many=True, read_only=True)
-    participants_detail = MemberBriefSerializer(
-        source="participants", many=True, read_only=True
-    )
+    admins_detail = serializers.SerializerMethodField(read_only=True)
+    participants_detail = serializers.SerializerMethodField(read_only=True)
     announcement_images = serializers.SerializerMethodField(read_only=True)
     sheets = serializers.SerializerMethodField(read_only=True)
 
@@ -153,6 +153,14 @@ class EventSerializer(serializers.ModelSerializer):
             results.append({"id": img.id, "image": url, "created_at": img.created_at})
         return results
 
+    def get_admins_detail(self, obj: Event) -> list[dict]:
+        members = sort_members(obj.admins.select_related("user").all())
+        return MemberBriefSerializer(members, many=True, context=self.context).data
+
+    def get_participants_detail(self, obj: Event) -> list[dict]:
+        members = sort_members(obj.participants.select_related("user").all())
+        return MemberBriefSerializer(members, many=True, context=self.context).data
+
     def get_sheets(self, obj: Event) -> list[dict]:
         try:
             sheets_qs = getattr(obj, "sheets", None)
@@ -166,7 +174,7 @@ class EventSerializer(serializers.ModelSerializer):
                     "arranger": s.arranger,
                     "is_restricted": s.is_restricted,
                 }
-                for s in sheets_qs.all()
+                for s in sort_sheets(sheets_qs.all())
             ]
         except Exception:
             return []

@@ -3,17 +3,50 @@
     <div class="card">
       <div class="card-content">
         <div class="profile-header">
-          <div class="avatar">{{ initials }}</div>
+          <div class="avatar-panel">
+            <button
+              v-if="hasMemberProfile"
+              class="avatar avatar-button"
+              type="button"
+              :disabled="uploadingAvatar"
+              aria-label="头像"
+              @click="openAvatarPicker"
+            >
+              <img
+                v-if="profileForm.avatar"
+                class="avatar-image"
+                :src="profileForm.avatar"
+                alt="头像"
+              />
+              <span v-else>{{ initials }}</span>
+              <span class="avatar-overlay"><i-lucide-camera :size="16" /></span>
+            </button>
+            <div v-else class="avatar">
+              <span>{{ initials }}</span>
+            </div>
+            <input
+              ref="avatarInput"
+              class="avatar-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              @change="handleAvatarChange"
+            />
+          </div>
           <div class="meta">
             <div class="name">{{ profileForm.name || '未命名' }}</div>
             <div class="tags">
               <el-tag type="info">{{ profileForm.user_id }}</el-tag>
-              <el-tag :type="getVoicePartType(profileForm.voice_part)">{{
-                profileForm.voice_part || 'Other'
-              }}</el-tag>
-              <el-tag :type="profileForm.tier === '一队' ? 'danger' : 'primary'">{{
-                profileForm.tier || '二队'
-              }}</el-tag>
+              <el-tag v-if="profileForm.role" type="success">{{ roleDisplayName }}</el-tag>
+              <el-tag
+                v-if="profileForm.voice_part"
+                :type="getVoicePartType(profileForm.voice_part)"
+                >{{ profileForm.voice_part || 'Other' }}</el-tag
+              >
+              <el-tag
+                v-if="profileForm.tier"
+                :type="profileForm.tier === '一队' ? 'danger' : 'primary'"
+                >{{ profileForm.tier || '二队' }}</el-tag
+              >
               <el-tag v-if="profileForm.status === 'ALUMNI'" type="warning">校友</el-tag>
             </div>
             <div class="signature-box">
@@ -45,10 +78,20 @@
         <div class="header" style="margin-bottom: 20px">
           <h3>个人信息</h3>
           <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="goEdit">编辑个人信息</button>
+            <button class="btn-modern primary sm-btn" @click="goEdit">
+              {{ profileActionText }}
+            </button>
           </div>
         </div>
         <div class="info-grid">
+          <div v-if="profileForm.role" class="info-item">
+            <div class="label">账号角色</div>
+            <div class="value">{{ roleDisplayName }}</div>
+          </div>
+          <div v-if="!hasMemberProfile" class="info-item">
+            <div class="label">成员档案</div>
+            <div class="value">待完善</div>
+          </div>
           <div v-if="profileForm.wechat_id" class="info-item">
             <div class="label">微信号</div>
             <div class="value">{{ profileForm.wechat_id }}</div>
@@ -163,7 +206,7 @@
             <div class="summary-value">{{ displayAlumniValue(alumniContact.industry) }}</div>
           </div>
           <div class="alumni-summary-item">
-            <div class="summary-label">公司 / 职位</div>
+            <div class="summary-label">单位 / 职位</div>
             <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
           </div>
         </div>
@@ -211,7 +254,7 @@
             </el-form-item>
           </div>
           <div class="alumni-form-field">
-            <el-form-item label="公司">
+            <el-form-item label="单位">
               <el-input v-model="alumniDraft.company" placeholder="可选" />
             </el-form-item>
           </div>
@@ -258,7 +301,7 @@
       </template>
     </el-dialog>
 
-    <div v-if="hiddenFields.length > 0" class="card">
+    <div v-if="hasMemberProfile && hiddenFields.length > 0" class="card">
       <div class="card-content">
         <div class="header" style="margin-bottom: 8px">
           <h3>已隐藏的信息</h3>
@@ -288,7 +331,7 @@
         </div>
       </div>
       <div
-        v-if="hiddenFields.length === 0"
+        v-if="hasMemberProfile && hiddenFields.length === 0"
         class="card card-clickable flat"
         @click="openPrivacyDialog"
       >
@@ -303,6 +346,62 @@
         </div>
       </div>
     </div>
+
+    <el-dialog
+      v-model="avatarCropDialog.visible"
+      title="调整头像"
+      :width="dialogWidth"
+      @closed="resetAvatarCrop"
+    >
+      <div class="avatar-cropper">
+        <div
+          class="avatar-crop-frame"
+          @pointerdown="startAvatarCropDrag"
+          @pointermove="moveAvatarCropDrag"
+          @pointerup="endAvatarCropDrag"
+          @pointercancel="endAvatarCropDrag"
+          @pointerleave="endAvatarCropDrag"
+        >
+          <img
+            v-if="avatarCrop.previewUrl"
+            class="avatar-crop-image"
+            :src="avatarCrop.previewUrl"
+            :style="avatarCropImageStyle"
+            alt="头像预览"
+            draggable="false"
+          />
+        </div>
+        <div class="avatar-crop-control">
+          <span class="crop-control-label">缩放</span>
+          <el-slider
+            v-model="avatarCrop.zoom"
+            :min="1"
+            :max="3"
+            :step="0.01"
+            :show-tooltip="false"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <button
+          class="btn-modern ghost sm-btn"
+          type="button"
+          :disabled="uploadingAvatar"
+          style="margin-right: 10px"
+          @click="avatarCropDialog.visible = false"
+        >
+          取消
+        </button>
+        <button
+          class="btn-modern primary sm-btn"
+          type="button"
+          :disabled="uploadingAvatar"
+          @click="handleCropAvatar"
+        >
+          保存
+        </button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="privacyDialog.visible" title="隐私设置" :width="dialogWidth">
       <div class="privacy-content">
@@ -394,8 +493,8 @@ import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { notify } from '@/utils/notify'
 import { getProfile, changePassword, updateProfile } from '@/api/auth'
-import { getMyAlumniProfile, updateMyAlumniProfile } from '@/api/personnel'
-import { Lock as LucideLock, EyeOff as LucideEyeOff } from 'lucide-vue-next'
+import { getMyAlumniProfile, updateMyAlumniProfile, uploadMemberAvatar } from '@/api/personnel'
+import { Lock as LucideLock, EyeOff as LucideEyeOff, Camera as LucideCamera } from 'lucide-vue-next'
 import TitleBadge from '@/components/common/TitleBadge.vue'
 
 export default {
@@ -403,15 +502,36 @@ export default {
   components: {
     'i-lucide-lock': LucideLock,
     'i-lucide-eye-off': LucideEyeOff,
+    'i-lucide-camera': LucideCamera,
     TitleBadge
   },
   setup() {
     const router = useRouter()
     const passwordRef = ref()
+    const avatarInput = ref()
+    const uploadingAvatar = ref(false)
+    const avatarCropDialog = ref({ visible: false })
+    const avatarCropFrameSize = 240
+    const avatarCropOutputSize = 512
+    const avatarCrop = reactive({
+      previewUrl: '',
+      fileName: '',
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      naturalWidth: 0,
+      naturalHeight: 0,
+      dragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      originX: 0,
+      originY: 0
+    })
 
     const profileForm = reactive({
       user_id: '',
       role: '',
+      avatar: '',
       name: '',
       wechat_id: '',
       gender: '',
@@ -440,6 +560,18 @@ export default {
     })
 
     const memberId = ref(null)
+    const hasMemberProfile = computed(() => !!memberId.value)
+    const roleDisplayName = computed(() => {
+      const roleMap = {
+        SuperAdmin: '超级管理员',
+        Admin: '管理员',
+        Member: '队员'
+      }
+      return roleMap[profileForm.role] || profileForm.role || '未知'
+    })
+    const profileActionText = computed(() =>
+      hasMemberProfile.value ? '编辑个人信息' : '完善个人信息'
+    )
     const alumniContact = reactive({
       current_city: '',
       industry: '',
@@ -493,6 +625,49 @@ export default {
         contact_note: source.contact_note || '',
         allow_contact: source.allow_contact !== false
       })
+    }
+
+    const avatarTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const avatarSizeLimit = 2 * 1024 * 1024
+
+    const getCropMetrics = () => {
+      const naturalWidth = avatarCrop.naturalWidth || avatarCropFrameSize
+      const naturalHeight = avatarCrop.naturalHeight || avatarCropFrameSize
+      const baseScale = Math.max(
+        avatarCropFrameSize / naturalWidth,
+        avatarCropFrameSize / naturalHeight
+      )
+      const scale = baseScale * avatarCrop.zoom
+      const width = naturalWidth * scale
+      const height = naturalHeight * scale
+      const maxX = Math.max(0, (width - avatarCropFrameSize) / 2)
+      const maxY = Math.max(0, (height - avatarCropFrameSize) / 2)
+      const offsetX = Math.min(maxX, Math.max(-maxX, avatarCrop.offsetX))
+      const offsetY = Math.min(maxY, Math.max(-maxY, avatarCrop.offsetY))
+      return { width, height, offsetX, offsetY, maxX, maxY }
+    }
+
+    const avatarCropImageStyle = computed(() => {
+      const { width, height, offsetX, offsetY } = getCropMetrics()
+      return {
+        width: `${width}px`,
+        height: `${height}px`,
+        transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`
+      }
+    })
+
+    const getApiErrorMessage = (error, fallback) => {
+      const body = error?.response?.data
+      const detail = body?.data
+      if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        const text = Object.entries(detail)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join('; ') : value}`)
+          .join(' | ')
+        if (text) {
+          return text
+        }
+      }
+      return body?.message || error?.message || fallback
     }
 
     const initials = computed(() => {
@@ -636,6 +811,7 @@ export default {
       memberId.value = member.id || null
 
       Object.assign(profileForm, {
+        avatar: member.avatar || '',
         wechat_id: member.wechat_id || '',
         gender: member.gender || '',
         voice_part: member.voice_part || '',
@@ -656,7 +832,7 @@ export default {
         join_month: member.join_month || '',
         graduate_month: member.graduate_month || '',
         tier: member.tier || '',
-        status: member.status || 'ACTIVE',
+        status: member.status || '',
         portfolio: member.portfolio || '',
         hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
         titles: Array.isArray(member.titles) ? member.titles : []
@@ -677,18 +853,187 @@ export default {
       }
     }
 
+    const openAvatarPicker = () => {
+      if (!hasMemberProfile.value) {
+        notify.warning('当前账号还没有成员档案，请先完善个人信息')
+        router.push('/first-login')
+        return
+      }
+      if (uploadingAvatar.value) {
+        return
+      }
+      avatarInput.value?.click()
+    }
+
+    const resetAvatarCrop = () => {
+      if (avatarCrop.previewUrl) {
+        URL.revokeObjectURL(avatarCrop.previewUrl)
+      }
+      Object.assign(avatarCrop, {
+        previewUrl: '',
+        fileName: '',
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
+        naturalWidth: 0,
+        naturalHeight: 0,
+        dragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        originX: 0,
+        originY: 0
+      })
+    }
+
+    const handleAvatarChange = async event => {
+      const file = event?.target?.files?.[0]
+      if (event?.target) {
+        event.target.value = ''
+      }
+      if (!file) {
+        return
+      }
+      if (!avatarTypes.includes(file.type)) {
+        notify.warning('仅支持 JPG、PNG 或 WebP 头像')
+        return
+      }
+      if (file.size > avatarSizeLimit) {
+        notify.warning('头像大小不能超过 2MB')
+        return
+      }
+      resetAvatarCrop()
+      const previewUrl = URL.createObjectURL(file)
+      const image = new Image()
+      image.onload = () => {
+        Object.assign(avatarCrop, {
+          previewUrl,
+          fileName: file.name || 'avatar.png',
+          zoom: 1,
+          offsetX: 0,
+          offsetY: 0,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight
+        })
+        avatarCropDialog.value.visible = true
+      }
+      image.onerror = () => {
+        URL.revokeObjectURL(previewUrl)
+        notify.warning('头像文件不是有效图片')
+      }
+      image.src = previewUrl
+    }
+
+    const clampAvatarCropOffset = (x, y) => {
+      const { maxX, maxY } = getCropMetrics()
+      avatarCrop.offsetX = Math.min(maxX, Math.max(-maxX, x))
+      avatarCrop.offsetY = Math.min(maxY, Math.max(-maxY, y))
+    }
+
+    const startAvatarCropDrag = event => {
+      if (!avatarCrop.previewUrl || uploadingAvatar.value) {
+        return
+      }
+      event.preventDefault()
+      avatarCrop.dragging = true
+      avatarCrop.dragStartX = event.clientX
+      avatarCrop.dragStartY = event.clientY
+      avatarCrop.originX = avatarCrop.offsetX
+      avatarCrop.originY = avatarCrop.offsetY
+      event.currentTarget?.setPointerCapture?.(event.pointerId)
+    }
+
+    const moveAvatarCropDrag = event => {
+      if (!avatarCrop.dragging) {
+        return
+      }
+      const nextX = avatarCrop.originX + event.clientX - avatarCrop.dragStartX
+      const nextY = avatarCrop.originY + event.clientY - avatarCrop.dragStartY
+      clampAvatarCropOffset(nextX, nextY)
+    }
+
+    const endAvatarCropDrag = event => {
+      avatarCrop.dragging = false
+      if (event?.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    }
+
+    const createSquareAvatarFile = () => {
+      return new Promise((resolve, reject) => {
+        if (!avatarCrop.previewUrl) {
+          reject(new Error('missing avatar image'))
+          return
+        }
+        const image = new Image()
+        image.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = avatarCropOutputSize
+          canvas.height = avatarCropOutputSize
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('canvas unavailable'))
+            return
+          }
+          const { width, height, offsetX, offsetY } = getCropMetrics()
+          const ratio = avatarCropOutputSize / avatarCropFrameSize
+          ctx.clearRect(0, 0, avatarCropOutputSize, avatarCropOutputSize)
+          ctx.fillStyle = '#fff'
+          ctx.fillRect(0, 0, avatarCropOutputSize, avatarCropOutputSize)
+          ctx.drawImage(
+            image,
+            (avatarCropFrameSize / 2 - width / 2 + offsetX) * ratio,
+            (avatarCropFrameSize / 2 - height / 2 + offsetY) * ratio,
+            width * ratio,
+            height * ratio
+          )
+          canvas.toBlob(blob => {
+            if (!blob) {
+              reject(new Error('avatar export failed'))
+              return
+            }
+            resolve(new File([blob], 'avatar.png', { type: 'image/png' }))
+          }, 'image/png')
+        }
+        image.onerror = () => reject(new Error('avatar image load failed'))
+        image.src = avatarCrop.previewUrl
+      })
+    }
+
+    const handleCropAvatar = async () => {
+      try {
+        uploadingAvatar.value = true
+        const file = await createSquareAvatarFile()
+        const res = await uploadMemberAvatar(memberId.value, file, null, {
+          skipErrorMessage: true
+        })
+        profileForm.avatar = res.data?.avatar || ''
+        avatarCropDialog.value.visible = false
+        notify.success('头像已更新')
+      } catch (e) {
+        notify.error(getApiErrorMessage(e, '头像上传失败'))
+      } finally {
+        uploadingAvatar.value = false
+      }
+    }
+
     const goEdit = () => {
-      if (memberId.value) {
+      if (hasMemberProfile.value) {
         // 从 Profile 进入编辑页，编辑保存后应该返回 Profile
         router.push(
           `/personnel/members/${memberId.value}/edit?ref=${encodeURIComponent('/profile')}`
         )
       } else {
-        notify.warning('无法获取成员ID，请刷新页面重试')
+        notify.warning('当前账号还没有成员档案，请先完善个人信息')
+        router.push('/first-login')
       }
     }
 
     const openPrivacyDialog = () => {
+      if (!hasMemberProfile.value) {
+        notify.warning('当前账号还没有成员档案，请先完善个人信息')
+        router.push('/first-login')
+        return
+      }
       // 打开对话框时，将当前的隐私设置复制到临时变量
       tempHiddenFields.value = [...profileForm.hidden_fields]
       privacyDialog.value.visible = true
@@ -827,6 +1172,14 @@ export default {
       alumniContactStatusText,
       alumniCompanyTitle,
       displayAlumniValue,
+      hasMemberProfile,
+      profileActionText,
+      roleDisplayName,
+      avatarInput,
+      avatarCropDialog,
+      avatarCrop,
+      avatarCropImageStyle,
+      uploadingAvatar,
       initials,
       hiddenFields,
       getFieldDisplayName,
@@ -834,6 +1187,13 @@ export default {
       getVoicePartType,
       formatBirthday,
       goEdit,
+      openAvatarPicker,
+      handleAvatarChange,
+      resetAvatarCrop,
+      startAvatarCropDrag,
+      moveAvatarCropDrag,
+      endAvatarCropDrag,
+      handleCropAvatar,
       passwordForm,
       passwordRules,
       passwordRef,
@@ -879,6 +1239,13 @@ export default {
   gap: 16px;
   padding: 6px 0 4px;
 }
+.avatar-panel {
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
 .avatar {
   width: 64px;
   height: 64px;
@@ -890,6 +1257,43 @@ export default {
   justify-content: center;
   font-size: 28px;
   font-weight: 700;
+  overflow: hidden;
+  position: relative;
+  border: 0;
+  padding: 0;
+}
+.avatar-button {
+  cursor: pointer;
+  overflow: visible;
+}
+.avatar-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #fff;
+  border-radius: 50%;
+}
+.avatar-overlay {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  box-shadow: 0 0 0 2px #fff;
+}
+.avatar-input {
+  display: none;
 }
 .meta {
   flex: 1;
@@ -959,6 +1363,61 @@ export default {
   font-size: 14px;
   color: #374151;
   line-height: 1.7;
+}
+
+.avatar-cropper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 0 2px;
+}
+.avatar-crop-frame {
+  width: 240px;
+  height: 240px;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+  box-shadow:
+    0 0 0 1px rgba(17, 24, 39, 0.08),
+    0 8px 24px rgba(17, 24, 39, 0.12);
+}
+.avatar-crop-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.86),
+    0 0 0 999px rgba(17, 24, 39, 0.08);
+  pointer-events: none;
+}
+.avatar-crop-frame:active {
+  cursor: grabbing;
+}
+.avatar-crop-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  background: #fff;
+}
+.avatar-crop-control {
+  width: min(320px, 100%);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.crop-control-label {
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .alumni-window-header {

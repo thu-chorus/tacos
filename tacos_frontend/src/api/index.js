@@ -86,6 +86,32 @@ function handleLogout(cfg, message) {
   }
 }
 
+function formatErrorDetail(detail) {
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+    return ''
+  }
+  return Object.entries(detail)
+    .map(([key, value]) => {
+      if (Array.isArray(value)) {
+        return `${key}: ${value.join('; ')}`
+      }
+      if (value && typeof value === 'object') {
+        return `${key}: ${formatErrorDetail(value) || JSON.stringify(value)}`
+      }
+      return `${key}: ${String(value)}`
+    })
+    .filter(Boolean)
+    .join(' | ')
+}
+
+function resolveErrorMessage(data, fallback) {
+  const detailMessage = formatErrorDetail(data && data.data)
+  if (detailMessage) {
+    return detailMessage
+  }
+  return (data && data.message) || fallback
+}
+
 // 请求拦截器
 service.interceptors.request.use(
   config => {
@@ -159,7 +185,7 @@ service.interceptors.response.use(
 
       switch (status) {
       case 400:
-        message = data.message || '请求参数错误'
+        message = resolveErrorMessage(data, '请求参数错误')
         break
       case 401:
         // 如果是刷新token的请求失败，直接跳转登录
@@ -224,7 +250,7 @@ service.interceptors.response.use(
         message = data.message || '资源冲突'
         break
       case 422:
-        message = data.message || '数据验证失败'
+        message = resolveErrorMessage(data, '数据验证失败')
         break
       case 500:
         message = '服务器内部错误'
@@ -263,12 +289,14 @@ export const request = {
     return service.delete(url, { ...config })
   },
 
-  upload(url, formData, onProgress) {
+  upload(url, formData, onProgress, config = {}) {
     return service.post(url, formData, {
+      ...config,
       headers: {
+        ...(config.headers || {}),
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: onProgress
+      onUploadProgress: onProgress || config.onUploadProgress
     })
   }
 }
