@@ -1,7 +1,9 @@
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 
+from PIL import Image, UnidentifiedImageError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
@@ -36,7 +38,7 @@ class MemberViewSet(EnvelopeModelViewSet):
 
     def get_permissions(self):  # type: ignore[override]
         """更新成员时使用本人或管理员权限，其余操作使用默认成员权限。"""
-        if self.action in ("update", "partial_update"):
+        if self.action in ("update", "partial_update", "avatar"):
             return [IsSelfOrAdmin()]
         return super().get_permissions()
 
@@ -110,6 +112,57 @@ class MemberViewSet(EnvelopeModelViewSet):
 
         total = SystemStats.get_solo().total_members
         return Response({"total_members": total})
+
+    @action(
+        methods=["post", "delete"],
+        detail=True,
+        url_path="avatar",
+        permission_classes=[IsAuthenticated],
+    )
+    def avatar(self, request, public_id=None):
+        """上传或删除成员头像。"""
+        member: Member = self.get_object()
+
+        if request.method == "DELETE":
+            old_name = getattr(member.avatar, "name", "")
+            member.avatar = None
+            member.save(update_fields=["avatar", "updated_at"])
+            if old_name:
+                default_storage.delete(old_name)
+            return Response(self.get_serializer(member).data)
+
+        upload = request.FILES.get("avatar") or request.FILES.get("file")
+        if not upload:
+            return Response(envelope_error(422, "请上传头像文件", {}), status=422)
+
+        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        content_type = getattr(upload, "content_type", "") or ""
+        if content_type and content_type not in allowed_types:
+            return Response(
+                envelope_error(422, "仅支持 JPG/PNG/WebP 头像", {}), status=422
+            )
+
+        max_size = 2 * 1024 * 1024
+        if getattr(upload, "size", 0) > max_size:
+            return Response(envelope_error(422, "头像大小不能超过2MB", {}), status=422)
+
+        try:
+            image = Image.open(upload)
+            image.verify()
+        except (UnidentifiedImageError, OSError):
+            return Response(envelope_error(422, "头像文件不是有效图片", {}), status=422)
+        finally:
+            try:
+                upload.seek(0)
+            except Exception:
+                pass
+
+        old_name = getattr(member.avatar, "name", "")
+        member.avatar = upload
+        member.save(update_fields=["avatar", "updated_at"])
+        if old_name and old_name != getattr(member.avatar, "name", ""):
+            default_storage.delete(old_name)
+        return Response(self.get_serializer(member).data)
 
     def create(self, request, *args, **kwargs):  # type: ignore[override]
         serializer = self.get_serializer(data=request.data)

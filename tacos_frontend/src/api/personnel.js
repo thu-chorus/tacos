@@ -32,6 +32,18 @@ export function updateMember(userId, data, config = {}) {
   return request.patch(`/members/${userId}/`, data, config)
 }
 
+// 更新队员头像
+export function uploadMemberAvatar(userId, file, onProgress, config = {}) {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  return request.upload(`/members/${userId}/avatar/`, formData, onProgress, config)
+}
+
+// 删除队员头像
+export function deleteMemberAvatar(userId, config = {}) {
+  return request.delete(`/members/${userId}/avatar/`, config)
+}
+
 // 删除队员档案
 export function deleteMember(userId) {
   return request.delete(`/members/${userId}/`)

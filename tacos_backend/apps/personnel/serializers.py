@@ -1,4 +1,5 @@
 from typing import Any, Optional
+from urllib.parse import quote as urlquote
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -7,6 +8,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from apps.authentication.models import UserRole
+from apps.common.utils import generate_signed_token
 from apps.common.validators import YEAR_MONTH_REGEX
 
 from .models import (
@@ -109,6 +111,7 @@ class AlumniProfileSerializer(serializers.ModelSerializer):
 
 class MemberSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source="public_id", read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
     titles = serializers.SerializerMethodField(read_only=True)
     user_id = serializers.SerializerMethodField(read_only=True)
     password_hash = serializers.SerializerMethodField(read_only=True)
@@ -137,6 +140,7 @@ class MemberSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "user_id",
+            "avatar",
             "name",
             "gender",
             "voice_part",
@@ -170,10 +174,28 @@ class MemberSerializer(serializers.ModelSerializer):
             "role",
             "password",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "user_id")
+        read_only_fields = ("id", "avatar", "created_at", "updated_at", "user_id")
 
     def get_user_id(self, obj: Member) -> str:
         return getattr(obj.user, "user_id", "")
+
+    def get_avatar(self, obj: Member) -> str:
+        avatar = getattr(obj, "avatar", None)
+        if not avatar or not getattr(avatar, "name", ""):
+            return ""
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        subject = ""
+        if user and getattr(user, "is_authenticated", False):
+            subject = str(getattr(user, "user_id", "") or getattr(user, "id", ""))
+        rel_path = avatar.name
+        token = generate_signed_token(
+            rel_path, expires_in_seconds=3600, subject=subject
+        )
+        url = f"/api/v1/common/media/?path={urlquote(rel_path)}&token={urlquote(token)}"
+        if request and hasattr(request, "build_absolute_uri"):
+            return request.build_absolute_uri(url)
+        return url
 
     def validate_voice_part(self, value: str) -> str:
         if not value:

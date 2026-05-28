@@ -22,14 +22,14 @@ class IsSelfOrAdmin(BasePermission):
         if IsAdmin().has_permission(request, view):
             return True
         action = getattr(view, "action", None)
-        if action in ("update", "partial_update"):
+        if action in ("update", "partial_update", "avatar"):
             return True
         return False
 
     def has_object_permission(self, request, view, obj):  # type: ignore[override]
         if IsAdmin().has_permission(request, view):
             return True
-        if request.method in ("PUT", "PATCH"):
+        if request.method in ("PUT", "PATCH", "POST", "DELETE"):
             return getattr(getattr(obj, "user", None), "id", None) == getattr(
                 request.user, "id", None
             )

@@ -13,8 +13,6 @@
 - [服务管理](#服务管理)
 - [故障排查](#故障排查)
 
----
-
 ## 服务架构
 
 ```
@@ -40,11 +38,9 @@
 | Redis | 消息队列 | `redis` |
 | Django (Gunicorn) | Web应用 | `tacos` |
 | Celery Worker | 异步任务（PDF水印、Excel导出） | `tacos-celery-worker` |
-| Celery Beat | 定时任务（清理、更新寿星） | `tacos-celery-beat` |
+| Celery Beat | 定时任务（清理、长期未登录停用、更新寿星） | `tacos-celery-beat` |
 | Nginx | 反向代理 | `nginx` |
 | PostgreSQL | 数据库（推荐） | `postgresql` |
-
----
 
 ## 快速部署步骤
 
@@ -131,8 +127,6 @@ sudo systemctl status redis tacos tacos-celery-worker tacos-celery-beat
 sudo journalctl -u tacos -u tacos-celery-worker -u tacos-celery-beat -f
 ```
 
----
-
 ## 环境变量配置
 
 ### 配置文件
@@ -161,8 +155,8 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com
 CSRF_TRUSTED_ORIGINS=https://yourdomain.com
 
 # JWT
-ACCESS_TOKEN_LIFETIME_MINUTES=60
-REFRESH_TOKEN_LIFETIME_DAYS=7
+ACCESS_TOKEN_LIFETIME_MINUTES=1440
+REFRESH_TOKEN_LIFETIME_DAYS=10
 
 # Celery
 CELERY_BROKER_URL=redis://localhost:6379/0
@@ -170,8 +164,6 @@ CELERY_BROKER_URL=redis://localhost:6379/0
 # Watermark
 WATERMARK_FONT_PATH=/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc
 ```
-
----
 
 ## Django 服务部署
 
@@ -218,8 +210,6 @@ curl --unix-socket /run/gunicorn/tacos.sock http://localhost/api/v1/common/healt
 sudo tail -f /var/log/tacos/error.log
 ```
 
----
-
 ## Celery 服务部署
 
 ### 为什么需要 Celery？
@@ -230,6 +220,7 @@ sudo tail -f /var/log/tacos/error.log
 
 **定时任务：**
 - ⏰ 每小时清理过期的下载/导出任务
+- 👤 每天停用超过 6 个月未登录的在队成员
 - 🎂 每月1号自动更新"本月寿星"称号
 
 ### 安装 Redis
@@ -285,8 +276,6 @@ from config.celery import debug_task
 result = debug_task.delay()
 print(f"Task ID: {result.id}, Status: {result.status}")
 ```
-
----
 
 ## Nginx 配置
 
@@ -356,8 +345,6 @@ sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d yourdomain.com
 ```
 
----
-
 ## 服务管理
 
 ### 常用命令
@@ -401,8 +388,6 @@ sudo nano /var/www/tacos/tacos_backend/.env.production.local
 sudo systemctl restart tacos tacos-celery-worker tacos-celery-beat
 sudo systemctl status tacos tacos-celery-worker tacos-celery-beat
 ```
-
----
 
 ## 故障排查
 
@@ -482,8 +467,6 @@ sudo -u www-data test -r /run/gunicorn/tacos.sock && echo "OK" || echo "Permissi
 sudo tail -f /var/log/nginx/error.log
 ```
 
----
-
 ## 性能优化
 
 ### Gunicorn Workers
@@ -528,8 +511,6 @@ sudo nano /etc/logrotate.d/tacos
 }
 ```
 
----
-
 ## 安全检查清单
 
 - [ ] `DEBUG=false`
@@ -541,8 +522,6 @@ sudo nano /etc/logrotate.d/tacos
 - [ ] `.env.production.local` 权限为 600
 - [ ] 定期备份数据库
 - [ ] 配置防火墙
-
----
 
 ## 完整启动顺序
 
@@ -562,7 +541,5 @@ sudo systemctl start nginx
 # 验证
 sudo systemctl status redis tacos tacos-celery-worker tacos-celery-beat nginx
 ```
-
----
 
 部署完成后，请通过健康检查、服务状态和日志确认系统正常运行。
