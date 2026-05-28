@@ -138,6 +138,7 @@ def generate_member_export_task(self, task_id: str, filter_params: dict):
     """
     from .importers import build_export_workbook
     from .models import Member, MemberExportTask
+    from .sorting import sort_members
 
     try:
         task = MemberExportTask.objects.get(task_id=task_id)
@@ -163,7 +164,7 @@ def generate_member_export_task(self, task_id: str, filter_params: dict):
         if filter_params.get("department__icontains"):
             qs = qs.filter(department__icontains=filter_params["department__icontains"])
 
-        wb = build_export_workbook(qs)
+        wb = build_export_workbook(sort_members(qs.select_related("user")))
 
         from io import BytesIO
 

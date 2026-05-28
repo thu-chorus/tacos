@@ -35,6 +35,7 @@ def generate_assignment_export_task(
         dict: Task result with status and message
     """
     from apps.personnel.models import Member
+    from apps.personnel.sorting import sort_members
 
     from .models import Assignment, AssignmentExportTask, AssignmentSubmission
 
@@ -53,9 +54,11 @@ def generate_assignment_export_task(
 
         logger.info(f"Generating export for assignment {assignment_id}")
 
-        members_qs = Member.objects.filter(
-            Q(events=event) | Q(managed_events=event)
-        ).distinct()
+        members_qs = (
+            Member.objects.filter(Q(events=event) | Q(managed_events=event))
+            .select_related("user")
+            .distinct()
+        )
         if name:
             members_qs = members_qs.filter(name__icontains=name)
         if user_id:
@@ -93,7 +96,7 @@ def generate_assignment_export_task(
             ]
         )
 
-        for m in members_qs.order_by("name", "id"):
+        for m in sort_members(members_qs):
             sub = subs_map.get(int(m.id))
             if sub is None:
                 status = "未提交"

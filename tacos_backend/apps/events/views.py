@@ -17,8 +17,10 @@ from rest_framework.response import Response
 from apps.common.utils import envelope_error
 from apps.common.viewsets import EnvelopeModelViewSet
 from apps.personnel.models import Member, MemberStatus
+from apps.personnel.sorting import sort_members
 from apps.sheet_music.models import Sheet
 from apps.sheet_music.serializers import SheetSerializer
+from apps.sheet_music.sorting import sort_sheets
 
 from .models import (
     Assignment,
@@ -536,9 +538,16 @@ class EventViewSet(EnvelopeModelViewSet):
         # 活动成员包括管理员与参与人员
         from apps.personnel.serializers import MemberSerializer
 
-        members_qs = event.participants.all().union(event.admins.all())
-        checked_members = [m for m in members_qs if m.id in checked_ids]
-        not_checked_members = [m for m in members_qs if m.id not in checked_ids]
+        member_map = {
+            int(member.id): member
+            for member in [
+                *event.participants.select_related("user").all(),
+                *event.admins.select_related("user").all(),
+            ]
+        }
+        members = sort_members(member_map.values())
+        checked_members = [m for m in members if m.id in checked_ids]
+        not_checked_members = [m for m in members if m.id not in checked_ids]
         return Response(
             {
                 "checked": MemberSerializer(
@@ -939,7 +948,11 @@ class EventViewSet(EnvelopeModelViewSet):
             voice_part = request.query_params.get("voice_part")
 
             if include_all:
-                members_qs = Member.objects.filter(events=event).distinct()
+                members_qs = (
+                    Member.objects.filter(Q(events=event) | Q(managed_events=event))
+                    .select_related("user")
+                    .distinct()
+                )
                 if name:
                     members_qs = members_qs.filter(name__icontains=name)
                 if user_id:
@@ -959,8 +972,9 @@ class EventViewSet(EnvelopeModelViewSet):
                 page_size = int(request.query_params.get("page_size", 20))
                 start = (page - 1) * page_size
                 end = start + page_size
-                total = members_qs.count()
-                paged_members = list(members_qs.order_by("name", "id")[start:end])
+                ordered_members = sort_members(members_qs)
+                total = len(ordered_members)
+                paged_members = ordered_members[start:end]
 
                 results: list[dict] = []
                 serializer_context = {"request": request}
@@ -1250,11 +1264,7 @@ class EventViewSet(EnvelopeModelViewSet):
         """
         event: Event = self.get_object()
         user = request.user
-        qs = (
-            Sheet.objects.filter(visible_events=event)
-            .order_by("-upload_time")
-            .distinct()
-        )
+        qs = Sheet.objects.filter(visible_events=event).distinct()
         is_site_admin = getattr(user, "is_staff", False) or getattr(
             user, "role", ""
         ) in ("Admin", "SuperAdmin")
@@ -1287,8 +1297,15 @@ class EventViewSet(EnvelopeModelViewSet):
             qs = qs.filter(title__icontains=title)
         if composer:
             qs = qs.filter(composer__icontains=composer)
-        data = SheetSerializer(qs, many=True, context={"request": request}).data
-        return Response({"results": data, "count": qs.count()})
+        items = sort_sheets(qs)
+        total = len(items)
+        if "page" in request.query_params or "page_size" in request.query_params:
+            page = max(int(request.query_params.get("page", 1)), 1)
+            page_size = max(int(request.query_params.get("page_size", 20)), 1)
+            start = (page - 1) * page_size
+            items = items[start : start + page_size]
+        data = SheetSerializer(items, many=True, context={"request": request}).data
+        return Response({"results": data, "count": total})
 
     # =====================
     # =====================
@@ -1342,7 +1359,7 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看管理员列表", {}), status=403)
-        qs = event.admins.all()
+        qs = event.admins.select_related("user").all()
         name = request.query_params.get("name")
         user_id = request.query_params.get("user_id")
         voice_part = request.query_params.get("voice_part")
@@ -1356,8 +1373,9 @@ class EventViewSet(EnvelopeModelViewSet):
         page_size = int(request.query_params.get("page_size", 20))
         start = (page - 1) * page_size
         end = start + page_size
-        total = qs.count()
-        items = qs.order_by("name", "id")[start:end]
+        ordered_items = sort_members(qs)
+        total = len(ordered_items)
+        items = ordered_items[start:end]
         data = MemberBriefSerializer(
             items, many=True, context={"request": request}
         ).data
@@ -1391,7 +1409,7 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看成员列表", {}), status=403)
-        qs = event.participants.all()
+        qs = event.participants.select_related("user").all()
         name = request.query_params.get("name")
         user_id = request.query_params.get("user_id")
         voice_part = request.query_params.get("voice_part")
@@ -1405,8 +1423,9 @@ class EventViewSet(EnvelopeModelViewSet):
         page_size = int(request.query_params.get("page_size", 20))
         start = (page - 1) * page_size
         end = start + page_size
-        total = qs.count()
-        items = qs.order_by("name", "id")[start:end]
+        ordered_items = sort_members(qs)
+        total = len(ordered_items)
+        items = ordered_items[start:end]
         data = MemberBriefSerializer(
             items, many=True, context={"request": request}
         ).data

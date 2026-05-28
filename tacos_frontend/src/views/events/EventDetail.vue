@@ -365,7 +365,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="sortedAdmins.length === 0">
+              <tr v-if="(dialogs.admins.items || []).length === 0">
                 <td colspan="4" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in adminsPage" :key="row.id || row.member_id">
@@ -416,7 +416,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="sortedMembers.length === 0">
+              <tr v-if="(dialogs.members.items || []).length === 0">
                 <td colspan="4" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in membersPage" :key="row.id || row.member_id">
@@ -964,58 +964,17 @@ export default {
       }
     }
 
-    const TIER_ORDER = { 一队: 0, 二队: 1 }
-    const VOICE_PART_ORDER = { S1: 0, S2: 1, A1: 2, A2: 3, T1: 4, T2: 5, B1: 6, B2: 7, Other: 8 }
-    const nameCollator = new Intl.Collator(['zh-Hans-u-co-pinyin', 'zh-Hans', 'zh-CN', 'en'], {
-      sensitivity: 'base',
-      numeric: true
-    })
-    const compareMembers = (a, b) => {
-      const tierA = Object.prototype.hasOwnProperty.call(TIER_ORDER, a.tier)
-        ? TIER_ORDER[a.tier]
-        : 99
-      const tierB = Object.prototype.hasOwnProperty.call(TIER_ORDER, b.tier)
-        ? TIER_ORDER[b.tier]
-        : 99
-      if (tierA !== tierB) {
-        return tierA - tierB
-      }
-      const vpA = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, a.voice_part)
-        ? VOICE_PART_ORDER[a.voice_part]
-        : 99
-      const vpB = Object.prototype.hasOwnProperty.call(VOICE_PART_ORDER, b.voice_part)
-        ? VOICE_PART_ORDER[b.voice_part]
-        : 99
-      if (vpA !== vpB) {
-        return vpA - vpB
-      }
-      const nameA = (a.name || '').toString()
-      const nameB = (b.name || '').toString()
-      const nameCmp = nameCollator.compare(nameA, nameB)
-      if (nameCmp !== 0) {
-        return nameCmp
-      }
-      const idA = (a.user_id || '').toString()
-      const idB = (b.user_id || '').toString()
-      return idA.localeCompare(idB)
-    }
-    const sortedAdmins = computed(() => {
-      const list = dialogs.value.admins.items || []
-      return [...list].sort(compareMembers)
-    })
-    const sortedMembers = computed(() => {
-      const list = dialogs.value.members.items || []
-      return [...list].sort(compareMembers)
-    })
     const adminsPage = computed(() => {
       const pg = paginations.value.admins
+      const data = dialogs.value.admins.items || []
       const start = (pg.page - 1) * pg.pageSize
-      return [...sortedAdmins.value].slice(start, start + pg.pageSize)
+      return data.slice(start, start + pg.pageSize)
     })
     const membersPage = computed(() => {
       const pg = paginations.value.members
+      const data = dialogs.value.members.items || []
       const start = (pg.page - 1) * pg.pageSize
-      return [...sortedMembers.value].slice(start, start + pg.pageSize)
+      return data.slice(start, start + pg.pageSize)
     })
     const checkinsPage = computed(() => {
       const pg = paginations.value.checkins
@@ -1528,8 +1487,6 @@ export default {
       sheetsTotalPages,
       handlePageSize,
       handleCurrentPage,
-      sortedAdmins,
-      sortedMembers,
       isAdmin,
       formatDate,
       formatDateTime,

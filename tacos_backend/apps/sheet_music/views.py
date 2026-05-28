@@ -21,6 +21,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
 from apps.common.permissions import IsAuthenticatedReadAdminWrite
 from apps.common.viewsets import EnvelopeModelViewSet
@@ -33,6 +34,7 @@ from .constants import (
 )
 from .models import Sheet, SheetDownloadLog, SheetDownloadTask
 from .serializers import SheetDownloadTaskSerializer, SheetSerializer
+from .sorting import sort_sheets
 from .tasks import generate_watermarked_pdf_task
 
 
@@ -48,6 +50,20 @@ class SheetViewSet(EnvelopeModelViewSet):
         "visible_to_alumni": ["exact"],
     }
     search_fields = ["title", "composer", "arranger"]
+
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        """默认按曲名拼音排序，显式 ordering 参数仍交给 DRF 处理。"""
+        if request.query_params.get("ordering"):
+            return super().list(request, *args, **kwargs)
+
+        qs = self.filter_queryset(self.get_queryset())
+        items = sort_sheets(qs)
+        page = self.paginate_queryset(items)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
     def get_queryset(self):  # type: ignore[override]
         qs = super().get_queryset()
