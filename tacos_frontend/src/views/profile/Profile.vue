@@ -33,7 +33,7 @@
             />
           </div>
           <div class="meta">
-            <div class="name">{{ profileForm.name || '未命名' }}</div>
+            <div class="name">{{ profileDisplayName }}</div>
             <div class="tags">
               <el-tag type="info">{{ profileForm.user_id }}</el-tag>
               <el-tag v-if="profileForm.role" type="success">{{ roleDisplayName }}</el-tag>
@@ -491,6 +491,7 @@
 <script>
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
 import { getProfile, changePassword, updateProfile } from '@/api/auth'
 import { getMyAlumniProfile, updateMyAlumniProfile, uploadMemberAvatar } from '@/api/personnel'
@@ -507,9 +508,11 @@ export default {
   },
   setup() {
     const router = useRouter()
+    const store = useStore()
     const passwordRef = ref()
     const avatarInput = ref()
     const uploadingAvatar = ref(false)
+    const profileLoaded = ref(false)
     const avatarCropDialog = ref({ visible: false })
     const avatarCropFrameSize = 240
     const avatarCropOutputSize = 512
@@ -609,6 +612,19 @@ export default {
       const parts = [alumniContact.company, alumniContact.job_title].filter(Boolean)
       return parts.join(' / ')
     })
+    const cachedUserName = computed(() => {
+      const user = store.getters['auth/user'] || {}
+      return user.name || user.user_id || ''
+    })
+    const profileDisplayName = computed(() => {
+      if (profileForm.name) {
+        return profileForm.name
+      }
+      if (cachedUserName.value) {
+        return cachedUserName.value
+      }
+      return profileLoaded.value ? '未命名' : '加载中...'
+    })
 
     const displayAlumniValue = value => {
       return value || '未填写'
@@ -671,7 +687,7 @@ export default {
     }
 
     const initials = computed(() => {
-      const name = profileForm.name || ''
+      const name = profileForm.name || cachedUserName.value || ''
       return name ? name.substring(0, 1) : 'T'
     })
 
@@ -799,51 +815,56 @@ export default {
     }
 
     const loadProfile = async () => {
-      const res = await getProfile()
-      const user = res.data?.user || {}
-      const member = res.data?.member || {}
+      profileLoaded.value = false
+      try {
+        const res = await getProfile()
+        const user = res.data?.user || {}
+        const member = res.data?.member || {}
 
-      profileForm.user_id = user.user_id || ''
-      profileForm.role = user.role || ''
-      // 使用 member.name，因为队员信息中的姓名是可编辑的
-      profileForm.name = member.name || user.name || ''
+        profileForm.user_id = user.user_id || ''
+        profileForm.role = user.role || ''
+        // 使用 member.name，因为队员信息中的姓名是可编辑的
+        profileForm.name = member.name || user.name || ''
 
-      memberId.value = member.id || null
+        memberId.value = member.id || null
 
-      Object.assign(profileForm, {
-        avatar: member.avatar || '',
-        wechat_id: member.wechat_id || '',
-        gender: member.gender || '',
-        voice_part: member.voice_part || '',
-        department: member.department || '',
-        department_other: member.department_other || '',
-        class_name: member.class_name || '',
-        phone_number: member.phone_number || '',
-        email: member.email || '',
-        dorm: member.dorm || '',
-        birthday: member.birthday || '',
-        hometown: member.hometown || '',
-        ethnicity: member.ethnicity || '',
-        political_status: member.political_status || '',
-        political_affiliation: member.political_affiliation || '',
-        is_specialty: !!member.is_specialty,
-        is_centralized: !!member.is_centralized,
-        position: member.position || '',
-        join_month: member.join_month || '',
-        graduate_month: member.graduate_month || '',
-        tier: member.tier || '',
-        status: member.status || '',
-        portfolio: member.portfolio || '',
-        hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
-        titles: Array.isArray(member.titles) ? member.titles : []
-      })
-      if (member.status === 'ALUMNI') {
-        if (member.alumni_profile) {
-          copyAlumniFields(alumniContact, member.alumni_profile)
-          copyAlumniFields(alumniDraft, member.alumni_profile)
-        } else {
-          await loadAlumniContact()
+        Object.assign(profileForm, {
+          avatar: member.avatar || '',
+          wechat_id: member.wechat_id || '',
+          gender: member.gender || '',
+          voice_part: member.voice_part || '',
+          department: member.department || '',
+          department_other: member.department_other || '',
+          class_name: member.class_name || '',
+          phone_number: member.phone_number || '',
+          email: member.email || '',
+          dorm: member.dorm || '',
+          birthday: member.birthday || '',
+          hometown: member.hometown || '',
+          ethnicity: member.ethnicity || '',
+          political_status: member.political_status || '',
+          political_affiliation: member.political_affiliation || '',
+          is_specialty: !!member.is_specialty,
+          is_centralized: !!member.is_centralized,
+          position: member.position || '',
+          join_month: member.join_month || '',
+          graduate_month: member.graduate_month || '',
+          tier: member.tier || '',
+          status: member.status || '',
+          portfolio: member.portfolio || '',
+          hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
+          titles: Array.isArray(member.titles) ? member.titles : []
+        })
+        if (member.status === 'ALUMNI') {
+          if (member.alumni_profile) {
+            copyAlumniFields(alumniContact, member.alumni_profile)
+            copyAlumniFields(alumniDraft, member.alumni_profile)
+          } else {
+            await loadAlumniContact()
+          }
         }
+      } finally {
+        profileLoaded.value = true
       }
     }
 
@@ -1180,6 +1201,7 @@ export default {
       hasMemberProfile,
       profileActionText,
       roleDisplayName,
+      profileDisplayName,
       avatarInput,
       avatarCropDialog,
       avatarCrop,
