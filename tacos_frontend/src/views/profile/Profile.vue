@@ -838,7 +838,12 @@ export default {
         titles: Array.isArray(member.titles) ? member.titles : []
       })
       if (member.status === 'ALUMNI') {
-        await loadAlumniContact()
+        if (member.alumni_profile) {
+          copyAlumniFields(alumniContact, member.alumni_profile)
+          copyAlumniFields(alumniDraft, member.alumni_profile)
+        } else {
+          await loadAlumniContact()
+        }
       }
     }
 

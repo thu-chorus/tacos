@@ -44,6 +44,7 @@ from .serializers import (
     EventCheckinRecordSerializer,
     EventCheckinSessionSerializer,
     EventSerializer,
+    MemberBriefSerializer,
 )
 
 
@@ -282,9 +283,9 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看签到列表", {}), status=403)
-        qs = event.checkin_sessions.all().order_by("-started_at", "-id")
-        data = EventCheckinSessionSerializer(qs, many=True).data
-        return Response({"results": data, "count": qs.count()})
+        sessions = list(event.checkin_sessions.all().order_by("-started_at", "-id"))
+        data = EventCheckinSessionSerializer(sessions, many=True).data
+        return Response({"results": data, "count": len(sessions)})
 
     @action(
         detail=True,
@@ -296,9 +297,21 @@ class EventViewSet(EnvelopeModelViewSet):
         event: Event = self.get_object()
         session = event.checkin_sessions.filter(is_active=True).first()
         data = None
+        has_checked_in = False
         if session:
             data = EventCheckinSessionSerializer(session).data
-        return Response({"active": bool(session), "session": data})
+            member = getattr(request.user, "member", None)
+            if member:
+                has_checked_in = EventCheckinRecord.objects.filter(
+                    session=session, member=member
+                ).exists()
+        return Response(
+            {
+                "active": bool(session),
+                "session": data,
+                "has_checked_in": has_checked_in,
+            }
+        )
 
     @action(
         detail=True,
@@ -485,30 +498,41 @@ class EventViewSet(EnvelopeModelViewSet):
     def checkin_records(self, request, public_id=None):
         event: Event = self.get_object()
         user = request.user
-        is_event_admin = (
-            getattr(user, "member", None)
-            and event.admins.filter(pk=user.member.id).exists()
-        )
+        member = getattr(user, "member", None)
+        is_event_admin = member and event.admins.filter(pk=member.id).exists()
         is_site_admin = getattr(user, "is_staff", False) or getattr(
             user, "role", ""
         ) in ("Admin", "SuperAdmin")
         session_id = request.query_params.get("session_id")
-        if not (is_event_admin or is_site_admin):
-            member = getattr(user, "member", None)
+        mine_only = str(request.query_params.get("mine", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if mine_only:
+            if not member:
+                return Response(
+                    envelope_error(403, "仅队员可查看签到记录", {}), status=403
+                )
+            qs = EventCheckinRecord.objects.filter(
+                session__event=event, member=member
+            ).select_related("member__user", "session")
+        elif not (is_event_admin or is_site_admin):
             if member and (
                 event.participants.filter(pk=member.id).exists()
                 or event.admins.filter(pk=member.id).exists()
             ):
                 qs = EventCheckinRecord.objects.filter(
                     session__event=event, member=member
-                ).select_related("member", "session")
+                ).select_related("member__user", "session")
             else:
                 return Response(
                     envelope_error(403, "无权限查看签到记录", {}), status=403
                 )
         else:
             qs = EventCheckinRecord.objects.filter(session__event=event).select_related(
-                "member", "session"
+                "member__user", "session"
             )
         if session_id:
             qs = qs.filter(session_id=session_id)
@@ -546,32 +570,55 @@ class EventViewSet(EnvelopeModelViewSet):
             session = event.checkin_sessions.get(pk=session_id)
         except EventCheckinSession.DoesNotExist:
             return Response(envelope_error(404, "签到实例不存在", {}), status=404)
-        checked_ids = set(
-            EventCheckinRecord.objects.filter(session=session).values_list(
-                "member_id", flat=True
-            )
-        )
-        # 活动成员包括管理员与参与人员
-        from apps.personnel.serializers import MemberSerializer
-
+        records_by_member_id = {
+            int(record.member_id): record
+            for record in EventCheckinRecord.objects.filter(
+                session=session
+            ).select_related("member__user")
+        }
         member_map = {
             int(member.id): member
-            for member in [
-                *event.participants.select_related("user").all(),
-                *event.admins.select_related("user").all(),
-            ]
+            for member in Member.objects.filter(
+                Q(events=event) | Q(managed_events=event)
+            )
+            .select_related("user")
+            .distinct()
         }
         members = sort_members(member_map.values())
-        checked_members = [m for m in members if m.id in checked_ids]
-        not_checked_members = [m for m in members if m.id not in checked_ids]
+        checked_members = []
+        not_checked_members = []
+        results = []
+        for member in members:
+            record = records_by_member_id.get(int(member.id))
+            if record:
+                checked_members.append(member)
+            else:
+                not_checked_members.append(member)
+            results.append(
+                {
+                    "id": getattr(record, "id", None),
+                    "session": int(session.id),
+                    "member": int(member.id),
+                    "member_public_id": getattr(member, "public_id", ""),
+                    "member_name": getattr(member, "name", ""),
+                    "member_user_id": getattr(
+                        getattr(member, "user", None), "user_id", ""
+                    ),
+                    "voice_part": getattr(member, "voice_part", ""),
+                    "tier": getattr(member, "tier", ""),
+                    "checked_at": getattr(record, "checked_at", None),
+                    "lat": getattr(record, "lat", None),
+                    "lng": getattr(record, "lng", None),
+                }
+            )
         return Response(
             {
-                "checked": MemberSerializer(
-                    checked_members, many=True, context={"request": request}
+                "checked": MemberBriefSerializer(checked_members, many=True).data,
+                "not_checked": MemberBriefSerializer(
+                    not_checked_members, many=True
                 ).data,
-                "not_checked": MemberSerializer(
-                    not_checked_members, many=True, context={"request": request}
-                ).data,
+                "results": results,
+                "count": len(results),
             }
         )
 

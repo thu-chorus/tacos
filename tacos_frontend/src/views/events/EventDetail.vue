@@ -799,7 +799,10 @@ export default {
         }
         const s2 = await getCheckinStatus(curId)
         checkin.value = s2.data || { active: false, session: null }
-        await refreshMyCheckinFlag(curId)
+        const activeSessionId = Number(checkin.value?.session?.id)
+        hasCheckedIn.value = !!s2.data?.has_checked_in
+        checkedSessionIds.value =
+          hasCheckedIn.value && Number.isFinite(activeSessionId) ? [activeSessionId] : []
         await computePendingAssignmentsCount(curId)
       } finally {
         loading.value = false
@@ -824,7 +827,7 @@ export default {
         let total = Infinity
 
         while ((page - 1) * pageSize < total) {
-          const res = await getCheckinRecords(eventId, { page, page_size: pageSize })
+          const res = await getCheckinRecords(eventId, { page, page_size: pageSize, mine: true })
           const pageRows = res?.data?.results || []
           total = Number(res?.data?.count || pageRows.length || 0)
           rows.push(...pageRows)
@@ -876,7 +879,10 @@ export default {
       dialogs.value.checkins.visible = true
       dialogs.value.checkins.loading = true
       try {
-        const listRes = await getCheckinSessions(currentId.value)
+        const [listRes] = await Promise.all([
+          getCheckinSessions(currentId.value),
+          refreshMyCheckinFlag(currentId.value)
+        ])
         const payload = listRes && listRes.data ? listRes.data : listRes
         const sessions = (payload && (payload.results ?? payload)) || []
         dialogs.value.checkins.items = Array.isArray(sessions) ? sessions : sessions.results || []

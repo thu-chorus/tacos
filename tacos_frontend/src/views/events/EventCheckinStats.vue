@@ -128,12 +128,7 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  getCheckinSessionDetail,
-  getCheckinRecords,
-  getEventDetail,
-  getEventMembers
-} from '@/api/events'
+import { getCheckinSessionDetail, getCheckinSummary, getEventDetail } from '@/api/events'
 import { formatDateTime } from '@/utils/format'
 import Pagination from '@/components/common/Pagination.vue'
 
@@ -228,76 +223,14 @@ export default {
     const load = async () => {
       loading.value = true
       try {
-        const [sessionRes, eventRes] = await Promise.all([
+        const [sessionRes, eventRes, summaryRes] = await Promise.all([
           getCheckinSessionDetail(eventId, sessionId),
-          getEventDetail(eventId)
+          getEventDetail(eventId),
+          getCheckinSummary(eventId, sessionId)
         ])
         session.value = sessionRes.data
         event.value = eventRes.data
-
-        const allMembers = []
-        let currentPage = 1
-        const fetchPageSize = 200
-        let totalMembersCount = Infinity
-
-        while ((currentPage - 1) * fetchPageSize < totalMembersCount) {
-          const membersRes = await getEventMembers(eventId, {
-            page: currentPage,
-            page_size: fetchPageSize
-          })
-          const results = Array.isArray(membersRes?.data?.results) ? membersRes.data.results : []
-          totalMembersCount = Number(membersRes?.data?.count || results.length || 0)
-          allMembers.push(...results)
-
-          if (results.length < fetchPageSize) {
-            break
-          }
-          currentPage += 1
-          if (currentPage > 50) {
-            break // 安全上限
-          }
-        }
-
-        const recordsRes = await getCheckinRecords(eventId, { page_size: 10000 })
-        const allRecords = recordsRes.data?.results || []
-        const filteredRecords = allRecords.filter(r => r.session === parseInt(sessionId))
-
-        const checkinMap = {}
-        filteredRecords.forEach(record => {
-          const memberPublicId = record.member_public_id
-          if (memberPublicId) {
-            checkinMap[memberPublicId] = record
-          }
-        })
-
-        const mergedData = allMembers.map(member => {
-          const checkinRecord = checkinMap[member.id]
-          if (checkinRecord) {
-            return {
-              ...checkinRecord,
-              member_name: member.name,
-              member_user_id: member.user_id,
-              member_id: member.id,
-              voice_part: member.voice_part,
-              tier: member.tier
-            }
-          } else {
-            return {
-              id: null, // 无签到记录
-              member_id: member.id,
-              member_name: member.name,
-              member_user_id: member.user_id,
-              voice_part: member.voice_part,
-              tier: member.tier,
-              checked_at: null,
-              lat: null,
-              lng: null,
-              session: parseInt(sessionId)
-            }
-          }
-        })
-
-        records.value = mergedData.sort(compareMembers)
+        records.value = (summaryRes.data?.results || []).sort(compareMembers)
         pagination.value.total = records.value.length
 
         const maxPage = Math.max(1, Math.ceil(pagination.value.total / pagination.value.pageSize))

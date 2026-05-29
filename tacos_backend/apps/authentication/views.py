@@ -1,4 +1,5 @@
 from django.contrib.auth.models import update_last_login
+from django.db.models import Prefetch
 from django.http import JsonResponse
 
 from rest_framework.decorators import api_view, permission_classes
@@ -8,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.common.utils import envelope_error, envelope_ok
-from apps.personnel.models import Member
+from apps.personnel.models import Member, MemberTitle
 from apps.personnel.serializers import MemberSerializer
 
 from .policies import user_is_first_login, user_needs_profile_setup
@@ -114,7 +115,20 @@ def logout(request: Request) -> JsonResponse:
 def update_profile(request: Request) -> JsonResponse:
     if request.method == "GET":
         # 返回 user + member 聚合信息
-        member = getattr(request.user, "member", None)
+        member = (
+            Member.objects.select_related("user", "alumni_profile")
+            .prefetch_related(
+                Prefetch(
+                    "member_titles",
+                    queryset=MemberTitle.objects.select_related("title").order_by(
+                        "-awarded_at"
+                    ),
+                    to_attr="prefetched_member_titles",
+                )
+            )
+            .filter(user=request.user)
+            .first()
+        )
         data = {
             "user": UserSerializer(request.user).data,
             "member": (

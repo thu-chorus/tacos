@@ -61,6 +61,10 @@ export function getCheckinSessionDetail(eventId, sessionId) {
   return request.get(`/events/${eventId}/checkin/sessions/${sessionId}/detail/`)
 }
 
+export function getCheckinSummary(eventId, sessionId) {
+  return request.get(`/events/${eventId}/checkin/summary/`, { session_id: sessionId })
+}
+
 export function deleteCheckinSession(eventId, sessionId) {
   return request.delete(`/events/${eventId}/checkin/sessions/${sessionId}/`)
 }
