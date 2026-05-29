@@ -1,7 +1,9 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from rest_framework.test import APIClient
@@ -203,3 +205,23 @@ class EventBasicApiTest(TestCase):
 
         event.refresh_from_db()
         self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())
+
+    def test_event_list_prefetches_relation_checks(self):
+        for index in range(5):
+            event = Event.objects.create(
+                name=f"列表活动{index}",
+                introduction="排练",
+                start_date="2026-01-01",
+                end_date="2026-01-02",
+                visibility="ALL",
+            )
+            event.admins.add(self.member1)
+            if index % 2 == 0:
+                event.participants.add(self.member2)
+
+        self.client.force_authenticate(user=self.user2)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/api/v1/events/", {"page_size": 10})
+
+        self.assertEqual(response.status_code, 200, response.json())
+        self.assertLessEqual(len(ctx), 8)

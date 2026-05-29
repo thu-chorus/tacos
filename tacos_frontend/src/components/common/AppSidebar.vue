@@ -196,25 +196,16 @@ export default {
         myOngoingEvents.value = []
         return
       }
-      const aggregated = []
-      let page = 1
-      const pageSize = 200
-      let total = Infinity
       try {
-        while ((page - 1) * pageSize < total) {
-          const res = await getEventList({ page, page_size: pageSize })
-          const results = Array.isArray(res?.data?.results) ? res.data.results : []
-          total = Number(res?.data?.count || 0)
-          aggregated.push(...results)
-          if (results.length < pageSize) {
-            break
-          }
-          page += 1
-          if (page > 50) {
-            break
-          }
-        }
-        const mineOngoing = aggregated
+        const today = getTodayDateString()
+        const res = await getEventList({
+          page: 1,
+          page_size: 50,
+          start_date__lte: today,
+          end_date__gte: today
+        })
+        const results = Array.isArray(res?.data?.results) ? res.data.results : []
+        const mineOngoing = results
           .filter(ev => belongsToMe(ev) && isOngoing(ev))
           .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')))
         myOngoingEvents.value = mineOngoing.slice(0, 10)

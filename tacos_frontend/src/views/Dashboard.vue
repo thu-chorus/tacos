@@ -165,19 +165,19 @@ export default {
 
     const myUserId = computed(() => store.getters['auth/user']?.user_id || '')
 
-    const fetchMyEventsCount = async () => {
+    const fetchEventStats = async () => {
       if (!myUserId.value) {
-        return 0
+        return { totalEvents: 0, totalMyEvents: 0 }
       }
       let page = 1
       const pageSize = 200
       let total = Infinity
-      let count = 0
+      let myCount = 0
       while ((page - 1) * pageSize < total) {
         const res = await getEventList({ page, page_size: pageSize })
         const results = Array.isArray(res.data?.results) ? res.data.results : []
         total = Number(res.data?.count || 0)
-        count += results.filter(
+        myCount += results.filter(
           ev => ev?.relation === 'member' || ev?.relation === 'event_admin'
         ).length
         if (results.length < pageSize) {
@@ -188,32 +188,7 @@ export default {
           break
         }
       }
-      return count
-    }
-
-    const fetchAllEventsCount = async () => {
-      const uid = myUserId.value
-      if (!uid) {
-        return 0
-      }
-      let page = 1
-      const pageSize = 200
-      let total = Infinity
-      let count = 0
-      while ((page - 1) * pageSize < total) {
-        const res = await getEventList({ page, page_size: pageSize })
-        const results = Array.isArray(res.data?.results) ? res.data.results : []
-        total = Number(res.data?.count || 0)
-        count += results.length
-        if (results.length < pageSize) {
-          break
-        }
-        page += 1
-        if (page > 50) {
-          break
-        }
-      }
-      return count
+      return { totalEvents: Number.isFinite(total) ? total : 0, totalMyEvents: myCount }
     }
 
     const loadDashboardData = async () => {
@@ -226,9 +201,10 @@ export default {
         const sheetsRes = await getSheetList({ page_size: 1 })
         stats.totalSheets = sheetsRes.data?.count ?? 'NaN'
 
-        // 我的活动总数（统计我参与或我为管理员的活动）
-        stats.totalMyEvents = await fetchMyEventsCount()
-        stats.totalEvents = await fetchAllEventsCount()
+        // 活动总数和我参与/管理的活动数共用一次分页扫描
+        const eventStats = await fetchEventStats()
+        stats.totalMyEvents = eventStats.totalMyEvents
+        stats.totalEvents = eventStats.totalEvents
 
         // 公告（公开读取，无需鉴权）
         const annRes = await getAnnouncements({ page_size: 5 })

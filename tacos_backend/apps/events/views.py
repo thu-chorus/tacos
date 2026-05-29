@@ -5,7 +5,7 @@ import os
 from io import BytesIO
 from typing import Any
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from django.utils.encoding import smart_str
@@ -48,7 +48,23 @@ from .serializers import (
 
 
 class EventViewSet(EnvelopeModelViewSet):
-    queryset = Event.objects.all().order_by("-start_date", "-created_at")
+    queryset = (
+        Event.objects.prefetch_related(
+            Prefetch(
+                "admins",
+                queryset=Member.objects.only("id"),
+                to_attr="prefetched_admins",
+            ),
+            Prefetch(
+                "participants",
+                queryset=Member.objects.only("id"),
+                to_attr="prefetched_participants",
+            ),
+            "announcement_images",
+        )
+        .all()
+        .order_by("-start_date", "-created_at")
+    )
     serializer_class = EventSerializer
     permission_classes = [IsAdminOrEventAdmin]
     lookup_field = "public_id"

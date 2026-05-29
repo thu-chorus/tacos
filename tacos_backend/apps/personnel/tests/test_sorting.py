@@ -1,9 +1,18 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from rest_framework.test import APIClient
 
-from apps.personnel.models import AlumniProfile, Instructor, Member, MemberStatus
+from apps.personnel.models import (
+    AlumniProfile,
+    Instructor,
+    Member,
+    MemberStatus,
+    MemberTitle,
+    Title,
+)
 
 User = get_user_model()
 
@@ -98,3 +107,31 @@ class InstructorSortingTest(TestCase):
         self.assertEqual(response.status_code, 200, response.json())
         names = [item["member_name"] for item in response.json()["data"]["results"]]
         self.assertEqual(names, ["Alice", "Charlie", "Bob"])
+
+    def test_member_list_prefetches_titles_and_alumni_profiles(self):
+        title = Title.objects.create(name="生日之星")
+        alumni = create_member(
+            "20262011",
+            "Alumni",
+            voice_part="S1",
+            tier="一队",
+            status=MemberStatus.ALUMNI,
+        )
+        AlumniProfile.objects.create(member=alumni, graduation_month="2026-07")
+        members = [
+            create_member(
+                f"2026202{i}",
+                f"Member{i}",
+                voice_part="A1",
+                tier="一队",
+            )
+            for i in range(5)
+        ]
+        for member in [alumni, *members]:
+            MemberTitle.objects.create(member=member, title=title)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/api/v1/members/", {"page_size": 10})
+
+        self.assertEqual(response.status_code, 200, response.json())
+        self.assertLessEqual(len(ctx), 4)
