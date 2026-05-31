@@ -71,7 +71,7 @@
 
     <div
       v-if="
-        !canJoin &&
+        canViewEventContent &&
         (event.announcement || (event.announcement_images && event.announcement_images.length))
       "
       class="alerts-grid"
@@ -105,7 +105,7 @@
       </div>
     </div>
 
-    <div class="section-grid cards-row" v-if="!canJoin">
+    <div class="section-grid cards-row" v-if="canViewEventContent">
       <div class="card card-clickable flat" @click="openCheckinList">
         <div class="card-content stat-content">
           <div class="stat-icon">
@@ -1047,6 +1047,9 @@ export default {
     }
 
     const canEdit = computed(() => isAdmin.value || event.value?.relation === 'event_admin')
+    const canViewEventContent = computed(() => {
+      return canEdit.value || event.value?.is_participant === true
+    })
     const canJoin = computed(() => {
       if (!user.value || event.value?.is_participant) {
         return false
@@ -1491,6 +1494,7 @@ export default {
       formatDate,
       formatDateTime,
       canEdit,
+      canViewEventContent,
       canJoin,
       isParticipantMember,
       canSubmitCheckin,
