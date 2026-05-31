@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from rest_framework.test import APIClient
 
@@ -138,3 +141,65 @@ class EventBasicApiTest(TestCase):
         data_after_join = res_detail_after_join.json()["data"]
         self.assertEqual(data_after_join.get("relation"), "event_admin")
         self.assertEqual(data_after_join.get("is_participant"), True)
+
+    def test_event_admin_can_manage_without_joining(self):
+        """活动管理员不在参与者列表中时仍可管理活动。"""
+        self._auth("m10001", "Pass1001")
+        event = Event.objects.get(public_id=self.event_id)
+        self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())
+
+        detail_response = self.client.get(f"/api/v1/events/{self.event_id}/")
+        self.assertEqual(detail_response.status_code, 200, detail_response.json())
+        detail = detail_response.json()["data"]
+        self.assertEqual(detail.get("relation"), "event_admin")
+        self.assertEqual(detail.get("is_participant"), False)
+
+        admin_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/admin-detail/"
+        )
+        self.assertEqual(admin_response.status_code, 200, admin_response.json())
+
+        sessions_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/checkin/sessions/"
+        )
+        self.assertEqual(sessions_response.status_code, 200, sessions_response.json())
+
+        create_session_response = self.client.post(
+            f"/api/v1/events/{self.event_id}/checkin/start/",
+            {"name": "排练签到", "type": "NONE"},
+            format="json",
+        )
+        self.assertEqual(
+            create_session_response.status_code,
+            201,
+            create_session_response.json(),
+        )
+
+        create_assignment_response = self.client.post(
+            f"/api/v1/events/{self.event_id}/assignments/create/",
+            {
+                "title": "录音作业",
+                "description": "",
+                "deadline": (timezone.now() + timedelta(days=1)).isoformat(),
+            },
+            format="json",
+        )
+        self.assertEqual(
+            create_assignment_response.status_code,
+            201,
+            create_assignment_response.json(),
+        )
+
+        assignments_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/assignments/"
+        )
+        self.assertEqual(
+            assignments_response.status_code, 200, assignments_response.json()
+        )
+        self.assertEqual(assignments_response.json()["data"]["count"], 1)
+
+        members_response = self.client.get(f"/api/v1/events/{self.event_id}/members/")
+        self.assertEqual(members_response.status_code, 200, members_response.json())
+
+        event.refresh_from_db()
+        self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())

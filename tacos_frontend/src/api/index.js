@@ -184,79 +184,79 @@ service.interceptors.response.use(
       const { status, data } = response
 
       switch (status) {
-      case 400:
-        message = resolveErrorMessage(data, '请求参数错误')
-        break
-      case 401:
-        // 如果是刷新token的请求失败，直接跳转登录
-        if (config && config.url && config.url.includes('/auth/refresh')) {
-          handleLogout(cfg, '登录已过期，请重新登录')
-          return Promise.reject(error)
-        }
-
-        // 尝试刷新Token
-        if (!isRefreshing) {
-          isRefreshing = true
-
-          try {
-            const newToken = await refreshAccessToken()
-            isRefreshing = false
-            onTokenRefreshed(newToken)
-
-            // 重试原请求
-            if (config) {
-              config.headers.Authorization = `Bearer ${newToken}`
-              return service(config)
-            }
-          } catch (refreshError) {
-            isRefreshing = false
-            onRefreshFailed(refreshError)
+        case 400:
+          message = resolveErrorMessage(data, '请求参数错误')
+          break
+        case 401:
+          // 如果是刷新token的请求失败，直接跳转登录
+          if (config && config.url && config.url.includes('/auth/refresh')) {
             handleLogout(cfg, '登录已过期，请重新登录')
             return Promise.reject(error)
           }
-        } else {
-          // 其他请求等待刷新完成
-          return new Promise((resolve, reject) => {
-            subscribeTokenRefresh((newToken, err) => {
-              if (err || !newToken) {
-                reject(error)
-              } else if (config) {
+
+          // 尝试刷新Token
+          if (!isRefreshing) {
+            isRefreshing = true
+
+            try {
+              const newToken = await refreshAccessToken()
+              isRefreshing = false
+              onTokenRefreshed(newToken)
+
+              // 重试原请求
+              if (config) {
                 config.headers.Authorization = `Bearer ${newToken}`
-                resolve(service(config))
-              } else {
-                reject(error)
+                return service(config)
               }
-            })
-          })
-        }
-        return Promise.reject(error)
-      case 403:
-        // 保留后端消息（如“不在签到范围内”），有详细信息时追加
-        if (data && data.message) {
-          const detail = (data && data.data) || {}
-          if (detail && typeof detail.distance === 'number') {
-            message = `${data.message}（距目标约${Math.round(detail.distance)}米）`
+            } catch (refreshError) {
+              isRefreshing = false
+              onRefreshFailed(refreshError)
+              handleLogout(cfg, '登录已过期，请重新登录')
+              return Promise.reject(error)
+            }
           } else {
-            message = data.message
+            // 其他请求等待刷新完成
+            return new Promise((resolve, reject) => {
+              subscribeTokenRefresh((newToken, err) => {
+                if (err || !newToken) {
+                  reject(error)
+                } else if (config) {
+                  config.headers.Authorization = `Bearer ${newToken}`
+                  resolve(service(config))
+                } else {
+                  reject(error)
+                }
+              })
+            })
           }
-        } else {
-          message = '权限不足，无法访问'
-        }
-        break
-      case 404:
-        message = '请求的资源不存在'
-        break
-      case 409:
-        message = data.message || '资源冲突'
-        break
-      case 422:
-        message = resolveErrorMessage(data, '数据验证失败')
-        break
-      case 500:
-        message = '服务器内部错误'
-        break
-      default:
-        message = (data && data.message) || `请求失败 (${status})`
+          return Promise.reject(error)
+        case 403:
+          // 保留后端消息（如“不在签到范围内”），有详细信息时追加
+          if (data && data.message) {
+            const detail = (data && data.data) || {}
+            if (detail && typeof detail.distance === 'number') {
+              message = `${data.message}（距目标约${Math.round(detail.distance)}米）`
+            } else {
+              message = data.message
+            }
+          } else {
+            message = '权限不足，无法访问'
+          }
+          break
+        case 404:
+          message = '请求的资源不存在'
+          break
+        case 409:
+          message = data.message || '资源冲突'
+          break
+        case 422:
+          message = resolveErrorMessage(data, '数据验证失败')
+          break
+        case 500:
+          message = '服务器内部错误'
+          break
+        default:
+          message = (data && data.message) || `请求失败 (${status})`
       }
     }
 

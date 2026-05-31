@@ -33,8 +33,8 @@ module.exports = {
     'prefer-template': 'error',
 
     // 代码风格
-    'indent': ['error', 2],
-    'quotes': ['error', 'single'],
+    'indent': ['error', 2, { SwitchCase: 1 }],
+    'quotes': ['error', 'single', { avoidEscape: true }],
     'semi': ['error', 'never'],
     'comma-dangle': ['error', 'never'],
     'eol-last': ['error', 'always'],
