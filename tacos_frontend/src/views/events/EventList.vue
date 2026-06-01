@@ -395,6 +395,7 @@ export default {
     const myViewMode = ref('table')
     const otherViewMode = ref('table')
     const allEvents = ref([])
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -456,6 +457,7 @@ export default {
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         // 全量拉取（按页累计），以便前端拆分为两个列表并各自分页
@@ -465,6 +467,9 @@ export default {
         let total = Infinity
         while ((page - 1) * pageSize < total) {
           const res = await getEventList(buildParams(page, pageSize))
+          if (requestSeq !== listRequestSeq) {
+            return
+          }
           const results = Array.isArray(res.data?.results) ? res.data.results : []
           total = Number(res.data?.count || 0)
           aggregated.push(...results)
@@ -479,7 +484,9 @@ export default {
         }
         allEvents.value = aggregated
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from rest_framework.test import APIClient
 
@@ -95,3 +97,24 @@ class SheetSortingTest(TestCase):
             [item["name"] for item in data["visible_members"]],
             ["Alice", "Charlie", "Bob"],
         )
+
+    def test_sheet_list_prefetches_visibility_details(self):
+        event = Event.objects.create(
+            name="可见活动",
+            introduction="排练",
+            start_date="2026-08-01",
+            end_date="2026-08-01",
+            visibility="ALL",
+        )
+        event.admins.add(self.admin_member)
+        member = create_member("20261011", "Visible", voice_part="S1", tier="一队")
+        for index in range(5):
+            sheet = create_sheet(f"ListSheet{index}")
+            sheet.visible_events.add(event)
+            sheet.visible_members.add(member)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/api/v1/sheets/", {"page_size": 10})
+
+        self.assertEqual(response.status_code, 200, response.json())
+        self.assertLessEqual(len(ctx), 5)

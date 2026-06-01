@@ -326,6 +326,7 @@ export default {
 
     const loading = ref(false)
     const viewMode = ref('table') // 'table' | 'card'
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -348,7 +349,7 @@ export default {
 
     const totalCount = ref(0)
 
-    const allMembers = ref([])
+    const members = ref([])
     const exporting = ref(false)
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
@@ -428,52 +429,54 @@ export default {
       const maxPage = Math.max(1, Math.ceil(totalCount.value / newPageSize) || 1)
       const newPage = urlState.value.page > maxPage ? maxPage : urlState.value.page
       urlState.value = { ...urlState.value, pageSize: newPageSize, page: newPage }
+      loadData()
     }
 
     const handleCurrentChange = val => {
       urlState.value = { ...urlState.value, page: val }
+      loadData()
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
-        const aggregated = []
-        let page = 1
-        const pageSize = 200
-        let total = Infinity
-        while ((page - 1) * pageSize < total) {
-          const response = await getMemberList({
-            name__icontains: urlState.value.name || undefined,
-            user_id: urlState.value.userId || undefined,
-            voice_part: urlState.value.voicePart || undefined,
-            tier: urlState.value.tier || undefined,
-            status: urlState.value.status || undefined,
-            birthday_month: urlState.value.birthdayMonth || undefined,
-            department: urlState.value.department || undefined,
-            page,
-            page_size: pageSize
-          })
-          const results = Array.isArray(response.data?.results) ? response.data.results : []
-          total = Number(response.data?.count || results.length || 0)
-          aggregated.push(...results)
-          if (results.length < pageSize) {
-            break
-          }
-          page += 1
-          if (page > 50) {
-            break
-          }
+        const response = await getMemberList({
+          name__icontains: urlState.value.name || undefined,
+          user_id: urlState.value.userId || undefined,
+          voice_part: urlState.value.voicePart || undefined,
+          tier: urlState.value.tier || undefined,
+          status: urlState.value.status || undefined,
+          birthday_month: urlState.value.birthdayMonth || undefined,
+          department: urlState.value.department || undefined,
+          page: urlState.value.page,
+          page_size: urlState.value.pageSize
+        })
+        if (requestSeq !== listRequestSeq) {
+          return
         }
-        allMembers.value = aggregated
-        totalCount.value = Array.isArray(allMembers.value) ? allMembers.value.length : 0
+        const results = Array.isArray(response.data?.results) ? response.data.results : []
+        members.value = results
+        totalCount.value = Number(response.data?.count || results.length || 0)
         const maxPage = Math.max(1, Math.ceil(totalCount.value / urlState.value.pageSize) || 1)
         if (urlState.value.page > maxPage) {
           urlState.value = { ...urlState.value, page: maxPage }
+          await loadData()
         }
       } catch (error) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
+        if (error?.response?.status === 404 && urlState.value.page !== 1) {
+          urlState.value = { ...urlState.value, page: 1 }
+          await loadData()
+          return
+        }
         console.error('Failed to load member list:', error)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -491,6 +494,7 @@ export default {
       ],
       () => {
         if (!isFirstLoad) {
+          urlState.value = { ...urlState.value, page: 1 }
           loadData()
         }
       },
@@ -510,8 +514,7 @@ export default {
     )
 
     const tableData = computed(() => {
-      const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return (allMembers.value || []).slice(start, start + urlState.value.pageSize)
+      return members.value || []
     })
 
     const totalPages = computed(() => {

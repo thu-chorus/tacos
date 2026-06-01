@@ -5,7 +5,7 @@ from typing import Optional
 from urllib.parse import quote, urlencode
 
 from django.core import signing
-from django.db.models import Q
+from django.db.models import Prefetch, Q, prefetch_related_objects
 from django.http import (
     FileResponse,
     Http404,
@@ -25,7 +25,8 @@ from rest_framework.response import Response
 
 from apps.common.permissions import IsAuthenticatedReadAdminWrite
 from apps.common.viewsets import EnvelopeModelViewSet
-from apps.personnel.models import MemberStatus
+from apps.events.models import Event
+from apps.personnel.models import Member, MemberStatus
 
 from .constants import (
     SHEET_STREAM_TOKEN_MAX_AGE_SECONDS,
@@ -51,17 +52,45 @@ class SheetViewSet(EnvelopeModelViewSet):
     }
     search_fields = ["title", "composer", "arranger"]
 
+    def _prefetch_list_relations(self, items) -> None:
+        prefetch_related_objects(
+            items,
+            Prefetch(
+                "visible_events",
+                queryset=Event.objects.order_by(
+                    "-start_date", "-created_at", "public_id"
+                ),
+                to_attr="prefetched_visible_events",
+            ),
+            Prefetch(
+                "visible_members",
+                queryset=Member.objects.select_related("user"),
+                to_attr="prefetched_visible_members",
+            ),
+        )
+
     def list(self, request, *args, **kwargs):  # type: ignore[override]
         """默认按曲名拼音排序，显式 ordering 参数仍交给 DRF 处理。"""
         if request.query_params.get("ordering"):
-            return super().list(request, *args, **kwargs)
+            qs = self.filter_queryset(self.get_queryset())
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                self._prefetch_list_relations(page)
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            items = list(qs)
+            self._prefetch_list_relations(items)
+            serializer = self.get_serializer(items, many=True)
+            return Response(serializer.data)
 
         qs = self.filter_queryset(self.get_queryset())
         items = sort_sheets(qs)
         page = self.paginate_queryset(items)
         if page is not None:
+            self._prefetch_list_relations(page)
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
+        self._prefetch_list_relations(items)
         serializer = self.get_serializer(items, many=True)
         return Response(serializer.data)
 

@@ -1,11 +1,13 @@
 <template>
   <div class="page-container">
     <div class="card">
-      <div class="card-content" v-loading="loading">
+      <div class="card-content">
         <div class="header" style="margin-bottom: 20px">
           <h3>编辑乐谱</h3>
         </div>
-        <el-form :model="form" label-width="80px">
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else :model="form" label-width="80px">
           <el-form-item label="曲名" required>
             <el-input v-model="form.title" placeholder="请输入曲名" />
           </el-form-item>
@@ -106,7 +108,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
@@ -114,10 +116,11 @@ import { getSheetDetail, updateSheet, deleteSheet } from '@/api/sheets'
 import { getEventList } from '@/api/events'
 import { getMemberList } from '@/api/personnel'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PageLoading from '@/components/common/PageLoading.vue'
 
 export default {
   name: 'SheetEdit',
-  components: { ConfirmDialog },
+  components: { ConfirmDialog, PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -125,10 +128,12 @@ export default {
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
-    const sheetId = route.params.id
+    const sheetId = computed(() => route.params.id)
     const loading = ref(false)
+    const formReady = ref(false)
     const submitting = ref(false)
     const deleting = ref(false)
+    let detailRequestSeq = 0
 
     // 删除确认对话框
     const deleteConfirmDialog = ref({
@@ -151,9 +156,15 @@ export default {
     const members = ref([])
 
     const load = async () => {
+      const requestSeq = ++detailRequestSeq
+      const currentSheetId = sheetId.value
+      formReady.value = false
       loading.value = true
       try {
-        const res = await getSheetDetail(sheetId)
+        const res = await getSheetDetail(currentSheetId)
+        if (requestSeq !== detailRequestSeq || String(currentSheetId) !== String(sheetId.value)) {
+          return
+        }
         const data = res.data || {}
         Object.assign(form, {
           title: data.title || '',
@@ -168,6 +179,7 @@ export default {
           visible_event_ids: (data.visible_events || []).map(e => e.id),
           visible_member_ids: (data.visible_members || []).map(m => m.id)
         })
+        formReady.value = true
       } catch (e) {
         if (e?.response?.status === 404) {
           notify.warning('乐谱不存在或已删除')
@@ -176,7 +188,9 @@ export default {
         }
         notify.error('加载失败')
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -206,7 +220,7 @@ export default {
       }
       submitting.value = true
       try {
-        await updateSheet(sheetId, {
+        await updateSheet(sheetId.value, {
           title: form.title,
           lyricist: form.lyricist,
           composer: form.composer,
@@ -223,9 +237,9 @@ export default {
         // 编辑保存后导航到详情页，并将原 ref 传递给详情页
         const refParam = route.query.ref
         if (refParam) {
-          router.push(`/sheets/${sheetId}?ref=${encodeURIComponent(refParam)}`)
+          router.push(`/sheets/${sheetId.value}?ref=${encodeURIComponent(refParam)}`)
         } else {
-          router.push(`/sheets/${sheetId}`)
+          router.push(`/sheets/${sheetId.value}`)
         }
       } catch (e) {
         notify.error('保存失败')
@@ -246,7 +260,7 @@ export default {
     const confirmDelete = async () => {
       deleting.value = true
       try {
-        await deleteSheet(sheetId)
+        await deleteSheet(sheetId.value)
         notify.success('删除成功')
         deleteConfirmDialog.value.visible = false
         // 使用 replace，避免返回历史时回到已删除的详情页
@@ -260,22 +274,32 @@ export default {
 
     onMounted(async () => {
       await load()
-      try {
-        const [er, mr] = await Promise.all([
-          getEventList({ page_size: 1000 }),
-          getMemberList({ page_size: 1000 })
-        ])
+      const [eventsResult, membersResult] = await Promise.allSettled([
+        getEventList({ page_size: 1000 }),
+        getMemberList({ page_size: 1000 })
+      ])
+      if (eventsResult.status === 'fulfilled') {
+        const er = eventsResult.value
         events.value = er?.data?.results || er?.data || []
+      }
+      if (membersResult.status === 'fulfilled') {
+        const mr = membersResult.value
         members.value = mr?.data?.results || mr?.data || []
-      } catch (e) {
-        // 下拉数据加载失败时保留空列表
       }
     })
+
+    watch(
+      () => route.params.id,
+      () => {
+        load()
+      }
+    )
 
     return {
       goBack,
       form,
       loading,
+      formReady,
       submitting,
       deleting,
       submit,

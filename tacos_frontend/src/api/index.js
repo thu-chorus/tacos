@@ -4,6 +4,7 @@ import { getToken, removeToken, getRefreshToken, setToken, setRefreshToken } fro
 import router from '@/router'
 import store from '@/store'
 import { API_BASE_URL } from '@/utils/constants'
+import { clearRequestCache } from '@/utils/requestCache'
 
 // 创建axios实例
 const BASE_URL =
@@ -18,6 +19,20 @@ const service = axios.create({
 
 // 401 处理防抖，避免重复弹窗/重定向
 let isHandling401 = false
+
+let pendingRequestCount = 0
+
+function beginRequestLoading() {
+  pendingRequestCount += 1
+  store.dispatch('setLoading', true)
+}
+
+function endRequestLoading() {
+  pendingRequestCount = Math.max(0, pendingRequestCount - 1)
+  if (pendingRequestCount === 0) {
+    store.dispatch('setLoading', false)
+  }
+}
 
 // 令牌刷新状态管理
 let isRefreshing = false
@@ -73,6 +88,7 @@ function handleLogout(cfg, message) {
     isHandling401 = true
     try {
       removeToken()
+      clearRequestCache()
       store.commit('auth/CLEAR_AUTH', null, { root: true })
       router.push('/login')
       if (!cfg.skipErrorMessage) {
@@ -116,7 +132,7 @@ function resolveErrorMessage(data, fallback) {
 service.interceptors.request.use(
   config => {
     // 显示加载状态
-    store.dispatch('setLoading', true)
+    beginRequestLoading()
 
     // 添加认证token
     const token = getToken()
@@ -127,7 +143,7 @@ service.interceptors.request.use(
     return config
   },
   error => {
-    store.dispatch('setLoading', false)
+    endRequestLoading()
     console.error('Request error:', error)
     return Promise.reject(error)
   }
@@ -136,7 +152,7 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
-    store.dispatch('setLoading', false)
+    endRequestLoading()
 
     const cfg = (response && response.config) || {}
 
@@ -174,7 +190,7 @@ service.interceptors.response.use(
     }
   },
   async error => {
-    store.dispatch('setLoading', false)
+    endRequestLoading()
 
     const { response, config } = error
     const cfg = config || (response && response.config) || {}

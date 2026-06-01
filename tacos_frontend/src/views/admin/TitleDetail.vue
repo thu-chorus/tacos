@@ -1,7 +1,13 @@
 <template>
   <div class="page-container">
+    <div v-if="!titleLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
+
     <!-- 基本信息卡片 -->
-    <div class="card">
+    <div v-else class="card">
       <div class="card-content">
         <div class="profile-header">
           <div class="meta">
@@ -35,7 +41,7 @@
     </div>
 
     <!-- 拥有该称号的队员列表卡片 -->
-    <div class="card" style="margin-top: 16px">
+    <div v-if="titleLoaded" class="card" style="margin-top: 16px">
       <div class="card-content">
         <div class="header" style="margin-bottom: 10px">
           <h3>拥有该称号的队员</h3>
@@ -228,7 +234,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { notify } from '@/utils/notify'
 import {
@@ -240,23 +246,27 @@ import {
   removeMemberTitle,
   getMemberList
 } from '@/api/personnel'
+import PageLoading from '@/components/common/PageLoading.vue'
 import TitleBadge from '@/components/common/TitleBadge.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 export default {
   name: 'TitleDetail',
-  components: { TitleBadge, Pagination, ConfirmDialog },
+  components: { PageLoading, TitleBadge, Pagination, ConfirmDialog },
   setup() {
     const route = useRoute()
     const router = useRouter()
 
     const loading = ref(false)
+    const titleLoaded = ref(false)
     const loadingMembers = ref(false)
     const saving = ref(false)
     const granting = ref(false)
     const titleInfo = ref({})
     const allMemberTitles = ref([])
+    let titleDetailRequestSeq = 0
+    let memberTitlesRequestSeq = 0
 
     const pagination = reactive({
       page: 1,
@@ -299,6 +309,7 @@ export default {
     // 队员选择器选项
     const memberOptions = ref([])
     const loadingMemberOptions = ref(false)
+    let memberQuerySeq = 0
 
     // 排序规则
     const TIER_ORDER = { 一队: 0, 二队: 1 }
@@ -346,24 +357,37 @@ export default {
     }
 
     // 加载称号详情
-    const loadTitleDetail = async () => {
+    const loadTitleDetail = async ({ reset = false } = {}) => {
+      const requestSeq = ++titleDetailRequestSeq
+      const titleId = route.params.id
+      if (reset) {
+        titleLoaded.value = false
+      }
       loading.value = true
       try {
-        const res = await getTitleDetail(route.params.id)
+        const res = await getTitleDetail(titleId)
+        if (requestSeq !== titleDetailRequestSeq || String(titleId) !== String(route.params.id)) {
+          return
+        }
         titleInfo.value = res.data || {}
+        titleLoaded.value = true
       } catch (error) {
         console.error('加载称号详情失败：', error)
         notify.error('加载称号详情失败')
       } finally {
-        loading.value = false
+        if (requestSeq === titleDetailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
     // 加载拥有该称号的队员列表
     const loadMemberTitles = async () => {
+      const requestSeq = ++memberTitlesRequestSeq
+      const titleId = route.params.id
       loadingMembers.value = true
       try {
-        const res = await getMemberTitles({ title_id: route.params.id, page_size: 1000 })
+        const res = await getMemberTitles({ title_id: titleId, page_size: 1000 })
         const items = Array.isArray(res.data?.results) ? res.data.results : res.data || []
 
         // 为每个成员获取详细信息（声部、梯队）
@@ -389,6 +413,10 @@ export default {
           }
         }
 
+        if (requestSeq !== memberTitlesRequestSeq || String(titleId) !== String(route.params.id)) {
+          return
+        }
+
         // 合并成员信息
         allMemberTitles.value = items.map(item => {
           const memberInfo = memberInfoMap[item.member_public_id] || {}
@@ -411,7 +439,9 @@ export default {
       } catch (error) {
         console.error('加载成员称号列表失败：', error)
       } finally {
-        loadingMembers.value = false
+        if (requestSeq === memberTitlesRequestSeq) {
+          loadingMembers.value = false
+        }
       }
     }
 
@@ -530,6 +560,7 @@ export default {
 
     // 搜索队员
     const queryMembers = async query => {
+      const requestSeq = ++memberQuerySeq
       loadingMemberOptions.value = true
       try {
         const params = { page_size: 1000 }
@@ -542,9 +573,14 @@ export default {
           }
         }
         const res = await getMemberList(params)
+        if (requestSeq !== memberQuerySeq) {
+          return
+        }
         memberOptions.value = res.data?.results || res.data || []
       } finally {
-        loadingMemberOptions.value = false
+        if (requestSeq === memberQuerySeq) {
+          loadingMemberOptions.value = false
+        }
       }
     }
 
@@ -649,9 +685,18 @@ export default {
     onMounted(() => {
       computeDialogWidth()
       window.addEventListener('resize', computeDialogWidth, { passive: true })
-      loadTitleDetail()
+      loadTitleDetail({ reset: true })
       loadMemberTitles()
     })
+
+    watch(
+      () => route.params.id,
+      () => {
+        pagination.page = 1
+        loadTitleDetail({ reset: true })
+        loadMemberTitles()
+      }
+    )
 
     onUnmounted(() => {
       window.removeEventListener('resize', computeDialogWidth)
@@ -659,6 +704,7 @@ export default {
 
     return {
       loading,
+      titleLoaded,
       loadingMembers,
       saving,
       granting,

@@ -165,19 +165,19 @@ export default {
 
     const myUserId = computed(() => store.getters['auth/user']?.user_id || '')
 
-    const fetchMyEventsCount = async () => {
+    const fetchEventStats = async () => {
       if (!myUserId.value) {
-        return 0
+        return { totalEvents: 0, totalMyEvents: 0 }
       }
       let page = 1
       const pageSize = 200
       let total = Infinity
-      let count = 0
+      let myCount = 0
       while ((page - 1) * pageSize < total) {
         const res = await getEventList({ page, page_size: pageSize })
         const results = Array.isArray(res.data?.results) ? res.data.results : []
         total = Number(res.data?.count || 0)
-        count += results.filter(
+        myCount += results.filter(
           ev => ev?.relation === 'member' || ev?.relation === 'event_admin'
         ).length
         if (results.length < pageSize) {
@@ -188,55 +188,37 @@ export default {
           break
         }
       }
-      return count
-    }
-
-    const fetchAllEventsCount = async () => {
-      const uid = myUserId.value
-      if (!uid) {
-        return 0
-      }
-      let page = 1
-      const pageSize = 200
-      let total = Infinity
-      let count = 0
-      while ((page - 1) * pageSize < total) {
-        const res = await getEventList({ page, page_size: pageSize })
-        const results = Array.isArray(res.data?.results) ? res.data.results : []
-        total = Number(res.data?.count || 0)
-        count += results.length
-        if (results.length < pageSize) {
-          break
-        }
-        page += 1
-        if (page > 50) {
-          break
-        }
-      }
-      return count
+      return { totalEvents: Number.isFinite(total) ? total : 0, totalMyEvents: myCount }
     }
 
     const loadDashboardData = async () => {
-      try {
-        // 成员总数（只取 count，减少数据量）
-        const membersRes = await getMemberStats()
-        stats.totalMembers = membersRes.data?.total_members ?? 'NaN'
+      // 独立统计并发加载，避免首页等待多轮请求串行完成
+      const results = await Promise.allSettled([
+        getMemberStats(),
+        getSheetList({ page_size: 1 }),
+        fetchEventStats(),
+        getAnnouncements({ page_size: 5 })
+      ])
 
-        // 我的乐谱总数
-        const sheetsRes = await getSheetList({ page_size: 1 })
-        stats.totalSheets = sheetsRes.data?.count ?? 'NaN'
-
-        // 我的活动总数（统计我参与或我为管理员的活动）
-        stats.totalMyEvents = await fetchMyEventsCount()
-        stats.totalEvents = await fetchAllEventsCount()
-
-        // 公告（公开读取，无需鉴权）
-        const annRes = await getAnnouncements({ page_size: 5 })
-        const items = annRes.data?.results || []
-        announcements.splice(0, announcements.length, ...items)
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error)
+      const [membersResult, sheetsResult, eventsResult, announcementsResult] = results
+      if (membersResult.status === 'fulfilled') {
+        stats.totalMembers = membersResult.value.data?.total_members ?? 'NaN'
       }
+      if (sheetsResult.status === 'fulfilled') {
+        stats.totalSheets = sheetsResult.value.data?.count ?? 'NaN'
+      }
+      if (eventsResult.status === 'fulfilled') {
+        stats.totalMyEvents = eventsResult.value.totalMyEvents
+        stats.totalEvents = eventsResult.value.totalEvents
+      }
+      if (announcementsResult.status === 'fulfilled') {
+        const items = announcementsResult.value.data?.results || []
+        announcements.splice(0, announcements.length, ...items)
+      }
+
+      results
+        .filter(result => result.status === 'rejected')
+        .forEach(result => console.error('Failed to load dashboard data:', result.reason))
     }
 
     onMounted(() => {

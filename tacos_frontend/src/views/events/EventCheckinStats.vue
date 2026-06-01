@@ -1,158 +1,165 @@
 <template>
-  <div class="page-container" v-loading="loading">
-    <div class="card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 16px">
-          <h3>{{ session.name || '签到详情' }}</h3>
-        </div>
+  <div class="page-container">
+    <div v-if="!pageLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
 
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="label">签到情况</div>
-            <div class="value">
-              <span style="font-weight: 600; font-size: 15px"
-                >{{ checkedInCount }} / {{ totalMemberCount }}</span
-              >
-              <span style="margin-left: 8px; color: #6b7280; font-size: 13px"
-                >（不含非成员管理员）</span
-              >
+    <template v-else>
+      <div class="card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 16px">
+            <h3>{{ session.name || '签到详情' }}</h3>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">签到情况</div>
+              <div class="value">
+                <span style="font-weight: 600; font-size: 15px"
+                  >{{ checkedInCount }} / {{ totalMemberCount }}</span
+                >
+                <span style="margin-left: 8px; color: #6b7280; font-size: 13px"
+                  >（不含非成员管理员）</span
+                >
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="label">签到类型</div>
-            <div class="value">
-              <el-tag :type="getSessionTypeTag(session.type)">{{
-                getCheckinTypeLabel(session.type)
-              }}</el-tag>
+            <div class="info-item">
+              <div class="label">签到类型</div>
+              <div class="value">
+                <el-tag :type="getSessionTypeTag(session.type)">{{
+                  getCheckinTypeLabel(session.type)
+                }}</el-tag>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="label">状态</div>
-            <div class="value">
-              <el-tag :type="session.is_active ? 'success' : 'info'">{{
-                session.is_active ? '进行中' : '已结束'
-              }}</el-tag>
+            <div class="info-item">
+              <div class="label">状态</div>
+              <div class="value">
+                <el-tag :type="session.is_active ? 'success' : 'info'">{{
+                  session.is_active ? '进行中' : '已结束'
+                }}</el-tag>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="label">开始时间</div>
-            <div class="value">{{ formatDateTime(session.started_at) }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">结束时间</div>
-            <div class="value">{{ formatDateTime(session.ended_at) || '未结束' }}</div>
-          </div>
-          <div
-            class="info-item"
-            v-if="session.type === 'LOCATION' && session.location_lat && session.location_lng"
-          >
-            <div class="label">位置</div>
-            <div class="value">
-              {{ session.location_lat }}, {{ session.location_lng }} (半径
-              {{ session.radius_m || 500 }}m)
+            <div class="info-item">
+              <div class="label">开始时间</div>
+              <div class="value">{{ formatDateTime(session.started_at) }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">结束时间</div>
+              <div class="value">{{ formatDateTime(session.ended_at) || '未结束' }}</div>
+            </div>
+            <div
+              class="info-item"
+              v-if="session.type === 'LOCATION' && session.location_lat && session.location_lng"
+            >
+              <div class="label">位置</div>
+              <div class="value">
+                {{ session.location_lat }}, {{ session.location_lng }} (半径
+                {{ session.radius_m || 500 }}m)
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 16px">
-          <h3>签到记录</h3>
-          <div class="actions">
-            <button class="btn-modern success sm-btn" @click="exportCsv">导出签到记录</button>
+      <div class="card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 16px">
+            <h3>签到记录</h3>
+            <div class="actions">
+              <button class="btn-modern success sm-btn" @click="exportCsv">导出签到记录</button>
+            </div>
           </div>
-        </div>
 
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="min-width: 100px">姓名</th>
-                <th style="min-width: 100px">学号</th>
-                <th style="min-width: 60px">声部</th>
-                <th style="min-width: 60px">梯队</th>
-                <th style="min-width: 90px">签到情况</th>
-                <th style="min-width: 160px">签到时间</th>
-                <th v-if="session.type === 'LOCATION'" style="min-width: 100px">纬度</th>
-                <th v-if="session.type === 'LOCATION'" style="min-width: 100px">经度</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="paginatedRecords.length === 0">
-                <td :colspan="columnCount" class="empty-cell">暂无数据</td>
-              </tr>
-              <tr v-for="row in paginatedRecords" :key="row.id || row.member_id">
-                <td>
-                  <el-link type="primary" @click="goMember(row)">{{
-                    row.member_name || '-'
-                  }}</el-link>
-                </td>
-                <td>{{ row.member_user_id || '-' }}</td>
-                <td>
-                  <el-tag :type="getVoicePartType(row.voice_part)">{{
-                    row.voice_part || '-'
-                  }}</el-tag>
-                </td>
-                <td>
-                  <el-tag :type="row.tier === '一队' ? 'danger' : 'primary'">{{
-                    row.tier || '-'
-                  }}</el-tag>
-                </td>
-                <td>
-                  <el-tag v-if="row.checked_at" type="success" size="small">已签到</el-tag>
-                  <el-tag v-else type="info" size="small">未签到</el-tag>
-                </td>
-                <td>{{ formatDateTime(row.checked_at) || '-' }}</td>
-                <td v-if="session.type === 'LOCATION'">{{ row.lat || '-' }}</td>
-                <td v-if="session.type === 'LOCATION'">{{ row.lng || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 100px">姓名</th>
+                  <th style="min-width: 100px">学号</th>
+                  <th style="min-width: 60px">声部</th>
+                  <th style="min-width: 60px">梯队</th>
+                  <th style="min-width: 90px">签到情况</th>
+                  <th style="min-width: 160px">签到时间</th>
+                  <th v-if="session.type === 'LOCATION'" style="min-width: 100px">纬度</th>
+                  <th v-if="session.type === 'LOCATION'" style="min-width: 100px">经度</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="paginatedRecords.length === 0">
+                  <td :colspan="columnCount" class="empty-cell">暂无数据</td>
+                </tr>
+                <tr v-for="row in paginatedRecords" :key="row.id || row.member_id">
+                  <td>
+                    <el-link type="primary" @click="goMember(row)">{{
+                      row.member_name || '-'
+                    }}</el-link>
+                  </td>
+                  <td>{{ row.member_user_id || '-' }}</td>
+                  <td>
+                    <el-tag :type="getVoicePartType(row.voice_part)">{{
+                      row.voice_part || '-'
+                    }}</el-tag>
+                  </td>
+                  <td>
+                    <el-tag :type="row.tier === '一队' ? 'danger' : 'primary'">{{
+                      row.tier || '-'
+                    }}</el-tag>
+                  </td>
+                  <td>
+                    <el-tag v-if="row.checked_at" type="success" size="small">已签到</el-tag>
+                    <el-tag v-else type="info" size="small">未签到</el-tag>
+                  </td>
+                  <td>{{ formatDateTime(row.checked_at) || '-' }}</td>
+                  <td v-if="session.type === 'LOCATION'">{{ row.lat || '-' }}</td>
+                  <td v-if="session.type === 'LOCATION'">{{ row.lng || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-        <Pagination
-          :current-page="pagination.page"
-          :total-pages="totalPages"
-          :page-size="pagination.pageSize"
-          :total="pagination.total"
-          @update:current-page="val => (pagination.page = val)"
-          @update:page-size="val => handlePageSizeChange(val)"
-        />
+          <Pagination
+            :current-page="pagination.page"
+            :total-pages="totalPages"
+            :page-size="pagination.pageSize"
+            :total="pagination.total"
+            @update:current-page="val => (pagination.page = val)"
+            @update:page-size="val => handlePageSizeChange(val)"
+          />
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  getCheckinSessionDetail,
-  getCheckinRecords,
-  getEventDetail,
-  getEventMembers
-} from '@/api/events'
+import { getCheckinSessionDetail, getCheckinSummary, getEventDetail } from '@/api/events'
 import { formatDateTime } from '@/utils/format'
+import PageLoading from '@/components/common/PageLoading.vue'
 import Pagination from '@/components/common/Pagination.vue'
 
 export default {
   name: 'CheckinSessionDetail',
   components: {
+    PageLoading,
     Pagination
   },
   setup() {
     const route = useRoute()
     const router = useRouter()
-    const eventId = route.params.id
-    const sessionId = route.params.sessionId
+    const eventId = computed(() => route.params.id)
+    const sessionId = computed(() => route.params.sessionId)
 
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const session = ref({})
     const event = ref({})
     const records = ref([])
     const pagination = ref({ page: 1, pageSize: 20, total: 0 })
+    let detailRequestSeq = 0
 
     const TIER_ORDER = { 一队: 0, 二队: 1 }
     const VOICE_PART_ORDER = { S1: 0, S2: 1, A1: 2, A2: 3, T1: 4, T2: 5, B1: 6, B2: 7, Other: 8 }
@@ -225,87 +232,41 @@ export default {
       }
     }
 
-    const load = async () => {
+    const load = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      const currentEventId = eventId.value
+      const currentSessionId = sessionId.value
+      if (reset) {
+        pageLoaded.value = false
+      }
       loading.value = true
       try {
-        const [sessionRes, eventRes] = await Promise.all([
-          getCheckinSessionDetail(eventId, sessionId),
-          getEventDetail(eventId)
+        const [sessionRes, eventRes, summaryRes] = await Promise.all([
+          getCheckinSessionDetail(currentEventId, currentSessionId),
+          getEventDetail(currentEventId),
+          getCheckinSummary(currentEventId, currentSessionId)
         ])
+        if (
+          requestSeq !== detailRequestSeq ||
+          String(currentEventId) !== String(eventId.value) ||
+          String(currentSessionId) !== String(sessionId.value)
+        ) {
+          return
+        }
         session.value = sessionRes.data
         event.value = eventRes.data
-
-        const allMembers = []
-        let currentPage = 1
-        const fetchPageSize = 200
-        let totalMembersCount = Infinity
-
-        while ((currentPage - 1) * fetchPageSize < totalMembersCount) {
-          const membersRes = await getEventMembers(eventId, {
-            page: currentPage,
-            page_size: fetchPageSize
-          })
-          const results = Array.isArray(membersRes?.data?.results) ? membersRes.data.results : []
-          totalMembersCount = Number(membersRes?.data?.count || results.length || 0)
-          allMembers.push(...results)
-
-          if (results.length < fetchPageSize) {
-            break
-          }
-          currentPage += 1
-          if (currentPage > 50) {
-            break // 安全上限
-          }
-        }
-
-        const recordsRes = await getCheckinRecords(eventId, { page_size: 10000 })
-        const allRecords = recordsRes.data?.results || []
-        const filteredRecords = allRecords.filter(r => r.session === parseInt(sessionId))
-
-        const checkinMap = {}
-        filteredRecords.forEach(record => {
-          const memberPublicId = record.member_public_id
-          if (memberPublicId) {
-            checkinMap[memberPublicId] = record
-          }
-        })
-
-        const mergedData = allMembers.map(member => {
-          const checkinRecord = checkinMap[member.id]
-          if (checkinRecord) {
-            return {
-              ...checkinRecord,
-              member_name: member.name,
-              member_user_id: member.user_id,
-              member_id: member.id,
-              voice_part: member.voice_part,
-              tier: member.tier
-            }
-          } else {
-            return {
-              id: null, // 无签到记录
-              member_id: member.id,
-              member_name: member.name,
-              member_user_id: member.user_id,
-              voice_part: member.voice_part,
-              tier: member.tier,
-              checked_at: null,
-              lat: null,
-              lng: null,
-              session: parseInt(sessionId)
-            }
-          }
-        })
-
-        records.value = mergedData.sort(compareMembers)
+        records.value = (summaryRes.data?.results || []).sort(compareMembers)
         pagination.value.total = records.value.length
 
         const maxPage = Math.max(1, Math.ceil(pagination.value.total / pagination.value.pageSize))
         if (pagination.value.page > maxPage) {
           pagination.value.page = maxPage
         }
+        pageLoaded.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -313,7 +274,7 @@ export default {
       if (row && row.member_id) {
         router.push({
           path: `/personnel/members/${row.member_id}`,
-          query: { ref: `/events/${eventId}/checkin/${sessionId}` }
+          query: { ref: `/events/${eventId.value}/checkin/${sessionId.value}` }
         })
       }
     }
@@ -361,8 +322,8 @@ export default {
       const a = document.createElement('a')
       a.href = url
 
-      const eventName = event.value.name || `活动${eventId}`
-      const sessionName = session.value.name || `签到${sessionId}`
+      const eventName = event.value.name || `活动${eventId.value}`
+      const sessionName = session.value.name || `签到${sessionId.value}`
       a.download = `${eventName}-${sessionName}-签到记录.csv`
 
       document.body.appendChild(a)
@@ -394,10 +355,17 @@ export default {
       return typeMap[voicePart] || 'info'
     }
 
-    onMounted(load)
+    onMounted(() => load({ reset: true }))
+    watch(
+      () => [route.params.id, route.params.sessionId],
+      () => {
+        load({ reset: true })
+      }
+    )
 
     return {
       loading,
+      pageLoaded,
       session,
       event,
       records,

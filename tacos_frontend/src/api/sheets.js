@@ -1,13 +1,38 @@
 import { request } from './index'
+import {
+  CACHE_TTL,
+  getCached,
+  invalidateCache,
+  invalidateCachePrefix,
+  normalizeCacheKey
+} from '@/utils/requestCache'
+
+function invalidateSheetCaches(sheetId) {
+  if (sheetId) {
+    invalidateCache(`sheets:detail:${sheetId}`)
+  }
+  invalidateCachePrefix('sheets:list:')
+  invalidateCachePrefix('events:detail:')
+}
 
 // 获取乐谱列表
-export function getSheetList(params) {
-  return request.get('/sheets/', params)
+export function getSheetList(params = {}, options = {}) {
+  return getCached(
+    `sheets:list:${normalizeCacheKey(params)}`,
+    () => request.get('/sheets/', params),
+    {
+      ttl: CACHE_TTL.LIST,
+      ...options
+    }
+  )
 }
 
 // 获取乐谱详情
-export function getSheetDetail(sheetId) {
-  return request.get(`/sheets/${sheetId}/`)
+export function getSheetDetail(sheetId, options = {}) {
+  return getCached(`sheets:detail:${sheetId}`, () => request.get(`/sheets/${sheetId}/`), {
+    ttl: CACHE_TTL.DETAIL,
+    ...options
+  })
 }
 
 // 上传乐谱
@@ -25,17 +50,23 @@ export function uploadSheet(file, metadata, onProgress) {
     }
   })
 
-  return request.upload('/sheets/', formData, onProgress)
+  return request.upload('/sheets/', formData, onProgress).finally(() => {
+    invalidateSheetCaches()
+  })
 }
 
 // 更新乐谱信息
 export function updateSheet(sheetId, data) {
-  return request.put(`/sheets/${sheetId}/`, data)
+  return request.put(`/sheets/${sheetId}/`, data).finally(() => {
+    invalidateSheetCaches(sheetId)
+  })
 }
 
 // 删除乐谱
 export function deleteSheet(sheetId) {
-  return request.delete(`/sheets/${sheetId}/`)
+  return request.delete(`/sheets/${sheetId}/`).finally(() => {
+    invalidateSheetCaches(sheetId)
+  })
 }
 
 // 发起异步下载/预览任务（返回task_id）

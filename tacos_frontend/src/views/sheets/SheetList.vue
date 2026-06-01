@@ -237,6 +237,7 @@ export default {
     const viewMode = ref('table')
 
     const loading = ref(false)
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -253,40 +254,44 @@ export default {
     })
 
     const totalCount = ref(0)
-    const allSheets = ref([])
+    const sheets = ref([])
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
-        const aggregated = []
-        let page = 1
-        const pageSize = 200
-        let total = Infinity
-        while ((page - 1) * pageSize < total) {
-          const res = await getSheetList({
-            title__icontains: (urlState.value.title && urlState.value.title.trim()) || undefined,
-            composer__icontains:
-              (urlState.value.composer && urlState.value.composer.trim()) || undefined,
-            page,
-            page_size: pageSize
-          })
-          const results = Array.isArray(res.data?.results) ? res.data.results : []
-          total = Number(res.data?.count || results.length || 0)
-          aggregated.push(...results)
-          if (results.length < pageSize) {
-            break
-          }
-          page += 1
-          if (page > 50) {
-            break
-          }
+        const res = await getSheetList({
+          title__icontains: (urlState.value.title && urlState.value.title.trim()) || undefined,
+          composer__icontains:
+            (urlState.value.composer && urlState.value.composer.trim()) || undefined,
+          page: urlState.value.page,
+          page_size: urlState.value.pageSize
+        })
+        if (requestSeq !== listRequestSeq) {
+          return
         }
-        allSheets.value = aggregated
-        totalCount.value = Array.isArray(allSheets.value) ? allSheets.value.length : 0
+        const results = Array.isArray(res.data?.results) ? res.data.results : []
+        sheets.value = results
+        totalCount.value = Number(res.data?.count || results.length || 0)
+        const maxPage = Math.max(1, Math.ceil(totalCount.value / urlState.value.pageSize) || 1)
+        if (urlState.value.page > maxPage) {
+          urlState.value = { ...urlState.value, page: maxPage }
+          await loadData()
+        }
       } catch (e) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
+        if (e?.response?.status === 404 && urlState.value.page !== 1) {
+          urlState.value = { ...urlState.value, page: 1 }
+          await loadData()
+          return
+        }
         console.error(e)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -300,9 +305,11 @@ export default {
     }
     const handleSizeChange = val => {
       urlState.value = { ...urlState.value, pageSize: val }
+      loadData()
     }
     const handleCurrentChange = val => {
       urlState.value = { ...urlState.value, page: val }
+      loadData()
     }
 
     const goUpload = () => {
@@ -392,6 +399,7 @@ export default {
       () => [urlState.value.title, urlState.value.composer],
       () => {
         if (!isFirstLoad) {
+          urlState.value = { ...urlState.value, page: 1 }
           loadData()
         }
       },
@@ -419,8 +427,7 @@ export default {
     })
 
     const tableData = computed(() => {
-      const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return (allSheets.value || []).slice(start, start + urlState.value.pageSize)
+      return sheets.value || []
     })
 
     return {

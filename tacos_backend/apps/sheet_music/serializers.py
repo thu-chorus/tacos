@@ -103,24 +103,27 @@ class SheetSerializer(serializers.ModelSerializer):
 
     def get_visible_events(self, obj: Sheet):
         try:
-            return [
-                {"id": getattr(e, "public_id", ""), "name": e.name}
-                for e in obj.visible_events.order_by(
+            events = getattr(obj, "prefetched_visible_events", None)
+            if events is None:
+                events = obj.visible_events.order_by(
                     "-start_date", "-created_at", "public_id"
                 )
-            ]
+            return [{"id": getattr(e, "public_id", ""), "name": e.name} for e in events]
         except Exception:
             return []
 
     def get_visible_members(self, obj: Sheet):
         try:
+            members = getattr(obj, "prefetched_visible_members", None)
+            if members is None:
+                members = obj.visible_members.select_related("user").all()
             return [
                 {
                     "id": getattr(m, "public_id", ""),
                     "user_id": getattr(m.user, "user_id", ""),
                     "name": m.name,
                 }
-                for m in sort_members(obj.visible_members.select_related("user").all())
+                for m in sort_members(members)
             ]
         except Exception:
             return []
