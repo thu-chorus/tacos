@@ -386,7 +386,7 @@ export default {
     const eventId = route.params.id
     const assignmentId = route.params.assignmentId
 
-    const loading = ref(false)
+    const loading = ref(true)
     const exporting = ref(false)
     const assignment = ref({})
     const search = ref({ name: '', user_id: '', voice_part: '', only_submitted: false })

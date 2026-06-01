@@ -236,7 +236,7 @@ export default {
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const viewMode = ref('table')
 
-    const loading = ref(false)
+    const loading = ref(true)
     let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL

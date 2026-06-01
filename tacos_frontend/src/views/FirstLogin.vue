@@ -8,13 +8,8 @@
       </div>
 
       <el-card>
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-width="120px"
-          v-loading="loading"
-        >
+        <PageLoading v-if="!formReady" />
+        <el-form v-else ref="formRef" :model="formData" :rules="formRules" label-width="120px">
           <!-- 基础信息 -->
           <div class="form-section">
             <h3 class="section-title">基础信息</h3>
@@ -380,12 +375,14 @@ import {
   CITIES
 } from '@/utils/constants'
 import { updateFirstLoginProfile, getProfile } from '@/api/auth'
+import PageLoading from '@/components/common/PageLoading.vue'
 import SiteFooter from '@/components/common/SiteFooter.vue'
 
 export default {
   name: 'FirstLogin',
   components: {
     Lock,
+    PageLoading,
     SiteFooter
   },
   setup() {
@@ -393,7 +390,7 @@ export default {
     const store = useStore()
 
     const formRef = ref()
-    const loading = ref(false)
+    const formReady = ref(false)
     const submitting = ref(false)
 
     // 计算可用的城市列表
@@ -521,8 +518,8 @@ export default {
       const now = new Date()
       formData.join_month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
+      formReady.value = false
       try {
-        loading.value = true
         const resp = await getProfile()
         const profile = (resp && resp.data) || {}
         const member = profile.member || {}
@@ -578,7 +575,7 @@ export default {
       } catch (_e) {
         formData.tier = formData.tier || '二队'
       } finally {
-        loading.value = false
+        formReady.value = true
       }
     }
 
@@ -679,7 +676,7 @@ export default {
 
     return {
       formRef,
-      loading,
+      formReady,
       submitting,
       formData,
       formRules,

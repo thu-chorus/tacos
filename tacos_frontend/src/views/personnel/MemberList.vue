@@ -324,7 +324,7 @@ export default {
     const router = useRouter()
     const route = useRoute()
 
-    const loading = ref(false)
+    const loading = ref(true)
     const viewMode = ref('table') // 'table' | 'card'
     let listRequestSeq = 0
 
