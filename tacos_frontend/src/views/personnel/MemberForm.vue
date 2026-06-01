@@ -14,13 +14,9 @@
             </button>
           </div>
         </div>
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-width="100px"
-          v-loading="loading"
-        >
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else ref="formRef" :model="formData" :rules="formRules" label-width="100px">
           <el-row :gutter="24">
             <el-col :xs="24" :sm="12">
               <el-form-item label="学号" prop="user_id">
@@ -454,7 +450,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import {
@@ -474,11 +470,12 @@ import {
   downloadMemberImportTemplate,
   bulkImportMembers
 } from '@/api/personnel'
+import PageLoading from '@/components/common/PageLoading.vue'
 import { downloadFile, getFilenameFromContentDisposition } from '@/utils/download'
 
 export default {
   name: 'MemberForm',
-  components: {},
+  components: { PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -495,9 +492,11 @@ export default {
     const importResult = reactive({ total: 0, success: 0, failed: 0, rows: [] })
 
     const isEdit = computed(() => !!route.params.id)
+    const formReady = ref(!isEdit.value)
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const currentUser = computed(() => store.getters['auth/user'])
     const isSelf = ref(false)
+    let detailRequestSeq = 0
 
     const formData = reactive({
       user_id: '',
@@ -660,9 +659,20 @@ export default {
     }
 
     const loadForEdit = async () => {
+      const requestSeq = ++detailRequestSeq
+      const memberId = route.params.id
+      if (!isEdit.value) {
+        formReady.value = true
+        return
+      }
+      formReady.value = false
+      isSelf.value = false
       loading.value = true
       try {
-        const res = await getMemberDetail(route.params.id)
+        const res = await getMemberDetail(memberId)
+        if (requestSeq !== detailRequestSeq || String(memberId) !== String(route.params.id)) {
+          return
+        }
         const data = res.data || {}
 
         if (currentUser.value && data.user_id === currentUser.value.user_id) {
@@ -712,8 +722,11 @@ export default {
           portfolio: data.portfolio || ''
         })
         updateHometown()
+        formReady.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -827,9 +840,19 @@ export default {
       }
     })
 
+    watch(
+      () => route.params.id,
+      () => {
+        if (isEdit.value) {
+          loadForEdit()
+        }
+      }
+    )
+
     return {
       formRef,
       loading,
+      formReady,
       submitting,
       isEdit,
       isSelf,

@@ -326,6 +326,7 @@ export default {
 
     const loading = ref(false)
     const viewMode = ref('table') // 'table' | 'card'
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -437,6 +438,7 @@ export default {
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const response = await getMemberList({
@@ -450,6 +452,9 @@ export default {
           page: urlState.value.page,
           page_size: urlState.value.pageSize
         })
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         const results = Array.isArray(response.data?.results) ? response.data.results : []
         members.value = results
         totalCount.value = Number(response.data?.count || results.length || 0)
@@ -459,6 +464,9 @@ export default {
           await loadData()
         }
       } catch (error) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         if (error?.response?.status === 404 && urlState.value.page !== 1) {
           urlState.value = { ...urlState.value, page: 1 }
           await loadData()
@@ -466,7 +474,9 @@ export default {
         }
         console.error('Failed to load member list:', error)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

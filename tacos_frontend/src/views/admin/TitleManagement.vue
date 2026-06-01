@@ -147,6 +147,7 @@ export default {
     const loading = ref(false)
     const savingTitle = ref(false)
     const allTitles = ref([])
+    let listRequestSeq = 0
 
     const pagination = reactive({
       page: 1,
@@ -172,9 +173,13 @@ export default {
 
     // 加载称号列表
     const loadTitles = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const res = await getTitleList({ page_size: 1000 })
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         allTitles.value = Array.isArray(res.data?.results) ? res.data.results : res.data || []
         pagination.total = allTitles.value.length
         // 确保当前页不超出范围
@@ -183,7 +188,9 @@ export default {
           pagination.page = maxPage
         }
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

@@ -192,27 +192,33 @@ export default {
     }
 
     const loadDashboardData = async () => {
-      try {
-        // 成员总数（只取 count，减少数据量）
-        const membersRes = await getMemberStats()
-        stats.totalMembers = membersRes.data?.total_members ?? 'NaN'
+      // 独立统计并发加载，避免首页等待多轮请求串行完成
+      const results = await Promise.allSettled([
+        getMemberStats(),
+        getSheetList({ page_size: 1 }),
+        fetchEventStats(),
+        getAnnouncements({ page_size: 5 })
+      ])
 
-        // 我的乐谱总数
-        const sheetsRes = await getSheetList({ page_size: 1 })
-        stats.totalSheets = sheetsRes.data?.count ?? 'NaN'
-
-        // 活动总数和我参与/管理的活动数共用一次分页扫描
-        const eventStats = await fetchEventStats()
-        stats.totalMyEvents = eventStats.totalMyEvents
-        stats.totalEvents = eventStats.totalEvents
-
-        // 公告（公开读取，无需鉴权）
-        const annRes = await getAnnouncements({ page_size: 5 })
-        const items = annRes.data?.results || []
-        announcements.splice(0, announcements.length, ...items)
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error)
+      const [membersResult, sheetsResult, eventsResult, announcementsResult] = results
+      if (membersResult.status === 'fulfilled') {
+        stats.totalMembers = membersResult.value.data?.total_members ?? 'NaN'
       }
+      if (sheetsResult.status === 'fulfilled') {
+        stats.totalSheets = sheetsResult.value.data?.count ?? 'NaN'
+      }
+      if (eventsResult.status === 'fulfilled') {
+        stats.totalMyEvents = eventsResult.value.totalMyEvents
+        stats.totalEvents = eventsResult.value.totalEvents
+      }
+      if (announcementsResult.status === 'fulfilled') {
+        const items = announcementsResult.value.data?.results || []
+        announcements.splice(0, announcements.length, ...items)
+      }
+
+      results
+        .filter(result => result.status === 'rejected')
+        .forEach(result => console.error('Failed to load dashboard data:', result.reason))
     }
 
     onMounted(() => {

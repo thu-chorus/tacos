@@ -182,6 +182,7 @@ export default {
     const editing = ref(false)
     const currentId = ref(null)
     const viewMode = ref('table') // 'table' | 'card'
+    let listRequestSeq = 0
 
     // 删除确认对话框
     const deleteConfirmDialog = reactive({
@@ -209,13 +210,19 @@ export default {
     })
 
     const loadList = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const res = await getAnnouncements(query)
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         announcements.value = res.data?.results || []
         total.value = res.data?.count || 0
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

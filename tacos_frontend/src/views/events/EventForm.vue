@@ -6,7 +6,9 @@
           <h3>{{ isEdit ? '编辑活动' : '创建活动' }}</h3>
         </div>
 
-        <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else :model="form" :rules="rules" ref="formRef" label-width="100px">
           <el-form-item label="名称" prop="name">
             <el-input v-model="form.name" placeholder="请输入活动名称" />
           </el-form-item>
@@ -239,15 +241,17 @@ import {
 import { getSheetList } from '@/api/sheets'
 import { Close } from '@element-plus/icons-vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PageLoading from '@/components/common/PageLoading.vue'
 
 export default {
   name: 'EventForm',
-  components: { ConfirmDialog },
+  components: { ConfirmDialog, PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
     const isEdit = computed(() => !!route.params.id)
+    const formReady = ref(!isEdit.value)
     const eventIdForApi = computed(() => route.params.id)
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
@@ -255,6 +259,9 @@ export default {
     const submitting = ref(false)
     const annImages = ref([])
     const annStage = ref({ add: [], removeIds: new Set() })
+    let memberQuerySeq = 0
+    let sheetQuerySeq = 0
+    let detailRequestSeq = 0
     const form = reactive({
       name: '',
       introduction: '',
@@ -370,6 +377,7 @@ export default {
     }
 
     const queryMembers = async query => {
+      const requestSeq = ++memberQuerySeq
       loadingMembers.value = true
       try {
         const params = { page_size: 1000 }
@@ -383,6 +391,9 @@ export default {
           }
         }
         const res = await getMemberList(params)
+        if (requestSeq !== memberQuerySeq) {
+          return
+        }
         const fetched = res.data?.results || res.data || []
         const mergedMap = new Map()
         fetched.forEach(m => mergedMap.set(m.id, m))
@@ -395,7 +406,9 @@ export default {
         }
         memberOptions.value = Array.from(mergedMap.values())
       } finally {
-        loadingMembers.value = false
+        if (requestSeq === memberQuerySeq) {
+          loadingMembers.value = false
+        }
       }
     }
 
@@ -470,10 +483,17 @@ export default {
     const importSecondTier = () => importTierMembers('二队')
 
     const loadDetailIfEdit = async () => {
+      const requestSeq = ++detailRequestSeq
+      const eventId = eventIdForApi.value
       if (!isEdit.value) {
+        formReady.value = true
         return
       }
-      const res = await getEventAdminDetail(eventIdForApi.value)
+      formReady.value = false
+      const res = await getEventAdminDetail(eventId)
+      if (requestSeq !== detailRequestSeq || String(eventId) !== String(eventIdForApi.value)) {
+        return
+      }
       const d = res.data
       form.name = d.name
       form.introduction = d.introduction
@@ -492,6 +512,7 @@ export default {
       const seedMap = new Map()
       ;(selectedSeed.value || []).forEach(m => seedMap.set(m.id, m))
       memberOptions.value = Array.from(seedMap.values())
+      formReady.value = true
     }
 
     const onSubmit = () => {
@@ -608,6 +629,7 @@ export default {
     const isAnnMarkedDelete = imageId => annStage.value.removeIds.has(imageId)
 
     const querySheets = async query => {
+      const requestSeq = ++sheetQuerySeq
       loadingSheets.value = true
       try {
         const params = { page_size: 1000 }
@@ -616,6 +638,9 @@ export default {
           params.search = q
         }
         const res = await getSheetList(params)
+        if (requestSeq !== sheetQuerySeq) {
+          return
+        }
         const fetched = res.data?.results || res.data || []
         const optionMap = new Map()
         ;(selectedSheetSeed.value || []).forEach(s => optionMap.set(s.id, s))
@@ -628,7 +653,9 @@ export default {
         const unselectedOptions = fetched.filter(s => !selectedIdSet.has(s.id))
         sheetOptions.value = [...selectedOptions, ...unselectedOptions]
       } finally {
-        loadingSheets.value = false
+        if (requestSeq === sheetQuerySeq) {
+          loadingSheets.value = false
+        }
       }
     }
 
@@ -670,9 +697,16 @@ export default {
 
     onMounted(async () => {
       await loadDetailIfEdit()
-      await queryMembers('')
-      await querySheets('')
+      await Promise.allSettled([queryMembers(''), querySheets('')])
     })
+
+    watch(
+      () => route.params.id,
+      async () => {
+        await loadDetailIfEdit()
+        await Promise.allSettled([queryMembers(''), querySheets('')])
+      }
+    )
 
     watch(
       () => form.visible_to_alumni,
@@ -689,6 +723,7 @@ export default {
 
     return {
       formRef,
+      formReady,
       form,
       rules,
       memberOptions,

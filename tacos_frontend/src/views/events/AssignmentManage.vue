@@ -395,6 +395,7 @@ export default {
     const total = ref(0)
     const page = ref(1)
     const pageSize = ref(20)
+    let detailRequestSeq = 0
 
     const isClosed = computed(() => {
       try {
@@ -426,9 +427,13 @@ export default {
     }
 
     const load = async () => {
+      const requestSeq = ++detailRequestSeq
       loading.value = true
       try {
         const detail = await getAssignmentDetail(eventId, assignmentId)
+        if (requestSeq !== detailRequestSeq) {
+          return
+        }
         assignment.value = detail.data
 
         const aggregated = []
@@ -443,6 +448,9 @@ export default {
             page: currentPage,
             page_size: fetchPageSize
           })
+          if (requestSeq !== detailRequestSeq) {
+            return
+          }
           const results = Array.isArray(list?.data?.results) ? list.data.results : []
           totalCount = Number(list?.data?.count || results.length || 0)
           aggregated.push(...results)
@@ -471,7 +479,9 @@ export default {
           page.value = maxPage
         }
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

@@ -221,15 +221,17 @@ export default {
     }
 
     onMounted(async () => {
-      try {
-        const [er, mr] = await Promise.all([
-          getEventList({ page_size: 1000 }),
-          getMemberList({ page_size: 1000 })
-        ])
+      const [eventsResult, membersResult] = await Promise.allSettled([
+        getEventList({ page_size: 1000 }),
+        getMemberList({ page_size: 1000 })
+      ])
+      if (eventsResult.status === 'fulfilled') {
+        const er = eventsResult.value
         events.value = er?.data?.results || er?.data || []
+      }
+      if (membersResult.status === 'fulfilled') {
+        const mr = membersResult.value
         members.value = mr?.data?.results || mr?.data || []
-      } catch (e) {
-        // 下拉数据加载失败时保留空列表
       }
     })
 

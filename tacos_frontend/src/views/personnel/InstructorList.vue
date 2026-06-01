@@ -185,6 +185,7 @@ export default {
     const loading = ref(false)
     const viewMode = ref('table') // 'table' | 'card'
     const tableData = ref([])
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -236,6 +237,7 @@ export default {
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const res = await getInstructorList({
@@ -243,12 +245,20 @@ export default {
           page: urlState.value.page,
           page_size: urlState.value.pageSize
         })
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         totalCount.value = res.data?.count || 0
         tableData.value = Array.isArray(res.data?.results) ? res.data.results : []
       } catch (e) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         console.error('Failed to load instructor list:', e)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 

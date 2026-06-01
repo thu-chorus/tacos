@@ -1,6 +1,12 @@
 <template>
   <div class="page-container">
-    <div class="card">
+    <div v-if="!pageLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
+
+    <div v-if="pageLoaded" class="card">
       <div class="card-content">
         <div class="profile-header">
           <div class="meta">
@@ -44,7 +50,7 @@
       </div>
     </div>
 
-    <div v-if="isParticipantMember && !canJoin" class="alerts-grid">
+    <div v-if="pageLoaded && isParticipantMember && !canJoin" class="alerts-grid">
       <div
         v-if="checkin.active && !hasCheckedIn"
         class="alert-card"
@@ -71,6 +77,7 @@
 
     <div
       v-if="
+        pageLoaded &&
         canViewEventContent &&
         (event.announcement || (event.announcement_images && event.announcement_images.length))
       "
@@ -105,7 +112,7 @@
       </div>
     </div>
 
-    <div class="section-grid cards-row" v-if="canViewEventContent">
+    <div class="section-grid cards-row" v-if="pageLoaded && canViewEventContent">
       <div class="card card-clickable flat" @click="openCheckinList">
         <div class="card-content stat-content">
           <div class="stat-icon">
@@ -654,6 +661,7 @@
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import PageLoading from '@/components/common/PageLoading.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import {
   getEventDetail,
@@ -694,6 +702,7 @@ import { doCheckinShare } from '@/utils/share'
 export default {
   name: 'EventDetail',
   components: {
+    PageLoading,
     Pagination,
     'i-lucide-user': LucideUser,
     'i-lucide-list-checks': LucideListChecks,
@@ -710,9 +719,11 @@ export default {
 
     const currentId = computed(() => route.params.id)
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const event = ref({})
     const checkin = ref({ active: false, session: null })
     const pendingAssignmentsCount = ref(0)
+    let detailRequestSeq = 0
     const dialogs = ref({
       checkins: { visible: false, loading: false, items: [] },
       assignments: { visible: false, loading: false, items: [] },
@@ -786,33 +797,54 @@ export default {
       return isAdmin.value || event.value?.relation === 'event_admin' || event.value?.is_participant
     }
 
-    const fetchDetail = async () => {
+    const fetchDetail = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      if (reset) {
+        pageLoaded.value = false
+      }
       loading.value = true
       try {
-        await loadMyMemberContext()
         const curId = route.params.id
-        const res = await getEventDetail(curId)
+        const isLatestRequest = () =>
+          requestSeq === detailRequestSeq && String(curId) === String(route.params.id)
+        const [res] = await Promise.all([getEventDetail(curId), loadMyMemberContext()])
+        if (!isLatestRequest()) {
+          return
+        }
         event.value = res.data
         // 设置分享页面信息
         if (event.value.name) {
           store.dispatch('common/setSharePageInfo', `活动「${event.value.name}」`)
         }
-        const s2 = await getCheckinStatus(curId)
+        const [checkinResult, pendingAssignmentsResult] = await Promise.allSettled([
+          getCheckinStatus(curId),
+          computePendingAssignmentsCount(curId)
+        ])
+        if (!isLatestRequest()) {
+          return
+        }
+        const s2 =
+          checkinResult.status === 'fulfilled'
+            ? checkinResult.value
+            : { data: { active: false, session: null } }
+        const nextPendingAssignmentsCount =
+          pendingAssignmentsResult.status === 'fulfilled' ? pendingAssignmentsResult.value : 0
         checkin.value = s2.data || { active: false, session: null }
         const activeSessionId = Number(checkin.value?.session?.id)
         hasCheckedIn.value = !!s2.data?.has_checked_in
         checkedSessionIds.value =
           hasCheckedIn.value && Number.isFinite(activeSessionId) ? [activeSessionId] : []
-        await computePendingAssignmentsCount(curId)
+        pendingAssignmentsCount.value = nextPendingAssignmentsCount
+        pageLoaded.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
     const refreshMyCheckinFlag = async eventId => {
       try {
-        hasCheckedIn.value = false
-        checkedSessionIds.value = []
         if (!user.value) {
           return
         }
@@ -843,11 +875,19 @@ export default {
 
         const myId = user.value.user_id
         const mine = rows.filter(r => r.member_user_id === myId)
-        checkedSessionIds.value = mine
+        const nextCheckedSessionIds = mine
           .map(r => Number(r.session))
           .filter(sessionId => Number.isFinite(sessionId))
+
+        if (String(eventId) !== String(currentId.value)) {
+          return
+        }
+
+        checkedSessionIds.value = nextCheckedSessionIds
         if (checkin.value.active && checkin.value.session) {
-          hasCheckedIn.value = checkedSessionIds.value.includes(Number(checkin.value.session.id))
+          hasCheckedIn.value = nextCheckedSessionIds.includes(Number(checkin.value.session.id))
+        } else {
+          hasCheckedIn.value = false
         }
       } catch (e) {
         // 签到记录加载失败时保持默认状态
@@ -859,19 +899,18 @@ export default {
     const computePendingAssignmentsCount = async eventId => {
       try {
         if (!event.value?.is_participant) {
-          pendingAssignmentsCount.value = 0
-          return
+          return 0
         }
         const ares = await getAssignments(eventId, { page_size: 200 })
         const rows = ares?.data?.results || []
         const now = dayjs().tz('Asia/Shanghai')
-        pendingAssignmentsCount.value = rows.filter(r => {
+        return rows.filter(r => {
           const deadline = dayjs(r.deadline).tz('Asia/Shanghai')
           const ongoing = !r.is_closed && deadline.valueOf() > now.valueOf()
           return ongoing && !r.my_submitted
         }).length
       } catch {
-        pendingAssignmentsCount.value = 0
+        return 0
       }
     }
 
@@ -1441,11 +1480,11 @@ export default {
       window.removeEventListener('resize', computeDialogWidths)
     })
 
-    onMounted(fetchDetail)
+    onMounted(() => fetchDetail({ reset: true }))
     watch(
       () => route.params.id,
       () => {
-        fetchDetail()
+        fetchDetail({ reset: true })
       }
     )
     const getVoicePartType = voicePart => {
@@ -1479,6 +1518,7 @@ export default {
     return {
       id: currentId,
       loading,
+      pageLoaded,
       event,
       checkin,
       pendingAssignmentsCount,
