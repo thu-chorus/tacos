@@ -391,7 +391,7 @@ export default {
     const route = useRoute()
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
-    const loading = ref(false)
+    const loading = ref(true)
     const myViewMode = ref('table')
     const otherViewMode = ref('table')
     const allEvents = ref([])

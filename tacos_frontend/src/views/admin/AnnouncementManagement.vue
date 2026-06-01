@@ -177,7 +177,7 @@ export default {
   setup() {
     const announcements = ref([])
     const total = ref(0)
-    const loading = ref(false)
+    const loading = ref(true)
     const dialogVisible = ref(false)
     const editing = ref(false)
     const currentId = ref(null)

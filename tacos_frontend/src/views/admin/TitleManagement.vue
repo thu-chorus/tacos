@@ -144,7 +144,7 @@ export default {
   setup() {
     const router = useRouter()
 
-    const loading = ref(false)
+    const loading = ref(true)
     const savingTitle = ref(false)
     const allTitles = ref([])
     let listRequestSeq = 0
