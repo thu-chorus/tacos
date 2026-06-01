@@ -610,17 +610,23 @@ export default {
     const querySheets = async query => {
       loadingSheets.value = true
       try {
-        const params = { page_size: 1000, ordering: '-upload_time' }
+        const params = { page_size: 1000 }
         const q = query && String(query).trim()
         if (q) {
           params.search = q
         }
         const res = await getSheetList(params)
         const fetched = res.data?.results || res.data || []
-        const mergedMap = new Map()
-        ;(selectedSheetSeed.value || []).forEach(s => mergedMap.set(s.id, s))
-        fetched.forEach(s => mergedMap.set(s.id, s))
-        sheetOptions.value = Array.from(mergedMap.values())
+        const optionMap = new Map()
+        ;(selectedSheetSeed.value || []).forEach(s => optionMap.set(s.id, s))
+        ;(sheetOptions.value || []).forEach(s => optionMap.set(s.id, s))
+        fetched.forEach(s => optionMap.set(s.id, s))
+
+        const selectedIds = Array.isArray(form.sheet_ids) ? form.sheet_ids : []
+        const selectedIdSet = new Set(selectedIds)
+        const selectedOptions = selectedIds.map(id => optionMap.get(id)).filter(Boolean)
+        const unselectedOptions = fetched.filter(s => !selectedIdSet.has(s.id))
+        sheetOptions.value = [...selectedOptions, ...unselectedOptions]
       } finally {
         loadingSheets.value = false
       }
