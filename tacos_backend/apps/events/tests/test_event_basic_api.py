@@ -1,4 +1,5 @@
 from datetime import timedelta
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.db import connection
@@ -6,6 +7,7 @@ from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
+from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
 from apps.events.models import Event
@@ -205,6 +207,46 @@ class EventBasicApiTest(TestCase):
 
         event.refresh_from_db()
         self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())
+
+    def test_site_admin_can_export_event_members(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("admin001", "AdminPass123")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            response["Content-Type"],
+        )
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        self.assertEqual(sheet["A1"].value, "学号")
+        self.assertEqual(sheet["A2"].value, "m10002")
+        self.assertEqual(sheet["B2"].value, "Member2")
+
+    def test_event_admin_can_export_event_members_without_joining(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("m10001", "Pass1001")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        exported_user_ids = [row[0].value for row in sheet.iter_rows(min_row=2)]
+        self.assertEqual(exported_user_ids, ["m10002"])
+
+    def test_participant_cannot_export_event_members(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("m10002", "Pass1002")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 403, response.json())
 
     def test_event_list_prefetches_relation_checks(self):
         for index in range(5):
