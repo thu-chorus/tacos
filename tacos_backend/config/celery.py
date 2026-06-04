@@ -6,6 +6,8 @@ TaCOS 的 Celery 配置。
 
 import os
 
+from django.conf import settings
+
 from celery import Celery
 from celery.schedules import crontab
 
@@ -20,6 +22,15 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # 从所有已注册的 Django 应用加载任务模块。
 app.autodiscover_tasks()
+
+stale_active_member_deactivation_cron = getattr(
+    settings,
+    "STALE_ACTIVE_MEMBER_DEACTIVATION_CRON",
+    {
+        "minute": 30,
+        "hour": 2,
+    },
+)
 
 
 @app.task(bind=True, ignore_result=True)
@@ -45,10 +56,10 @@ app.conf.beat_schedule = {
         "task": "apps.personnel.tasks.cleanup_expired_member_export_tasks",
         "schedule": crontab(minute=0),  # 每小时执行
     },
-    # 停用超过6个月未登录的在队成员（每天凌晨2:30）
+    # 停用超过6个月未登录的在队成员
     "deactivate-stale-active-members": {
         "task": "apps.personnel.tasks.deactivate_stale_active_members",
-        "schedule": crontab(minute=30, hour=2),  # 每日 02:30 执行
+        "schedule": crontab(**stale_active_member_deactivation_cron),
     },
     # 更新本月寿星称号（每月1号凌晨0点）
     "update-monthly-birthday-title": {

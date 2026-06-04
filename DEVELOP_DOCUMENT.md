@@ -1144,6 +1144,13 @@ python manage.py collectstatic --noinput
 sudo systemctl status tacos-celery-beat
 ```
 
+如需让 6 个月未登录队员停用任务每月执行一次，可在
+`tacos_backend/.env.production.local` 中设置：
+
+```bash
+STALE_ACTIVE_MEMBER_DEACTIVATION_DAY_OF_MONTH=1
+```
+
 #### 2. 前端部署
 
 ```bash
@@ -1156,6 +1163,26 @@ npm install
 npm run build
 
 # 3. 产物位于 dist/
+```
+
+#### 2.1 自动部署
+
+仓库包含 `.github/workflows/deploy-production.yml`。当 `main` 分支收到新提交时，
+GitHub Actions 会通过 SSH 登录生产服务器并执行：
+
+```bash
+cd /var/www/tacos
+git fetch origin main
+git reset --hard origin/main
+bash scripts/deploy_production.sh --skip-git-sync
+```
+
+需要在 GitHub 仓库中配置以下 Secrets：
+
+```text
+PROD_HOST=thuchorus.cc
+PROD_USER=root
+PROD_SSH_KEY=<生产服务器授权的私钥>
 ```
 
 #### 3. Systemd 服务配置
