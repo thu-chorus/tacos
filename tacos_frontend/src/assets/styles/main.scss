@@ -262,10 +262,34 @@ select {
   font-size: 14px;
   font-weight: 500;
 }
+.btn-modern {
+  min-width: max-content;
+  white-space: nowrap;
+}
+.btn-modern.w-full {
+  min-width: 100%;
+}
+.btn-modern .btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke-width: 2.2;
+}
+.btn-modern.big-btn .btn-icon {
+  width: 18px;
+  height: 18px;
+}
 .sm-btn {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
+}
+.btn-modern.sm-btn {
+  gap: 6px;
+}
+.btn-modern.sm-btn .btn-icon {
+  width: 14px;
+  height: 14px;
 }
 .sm-btn:active {
   transform: translateY(1px) scale(0.98);
@@ -274,6 +298,13 @@ select {
   padding: 4px 8px;
   border-radius: 5px;
   font-size: 10px;
+}
+.btn-modern.xsm-btn {
+  gap: 4px;
+}
+.btn-modern.xsm-btn .btn-icon {
+  width: 12px;
+  height: 12px;
 }
 .xsm-btn:active {
   transform: translateY(1px) scale(0.98);

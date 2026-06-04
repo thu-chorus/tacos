@@ -68,7 +68,10 @@
           <div class="header" style="margin-bottom: 16px">
             <h3>签到记录</h3>
             <div class="actions">
-              <button class="btn-modern success sm-btn" @click="exportCsv">导出签到记录</button>
+              <button class="btn-modern success sm-btn" @click="exportCsv">
+                <i-lucide-download class="btn-icon" />
+                <span>导出签到记录</span>
+              </button>
             </div>
           </div>
 
@@ -454,26 +457,33 @@ export default {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
 
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
 
 .empty-cell {

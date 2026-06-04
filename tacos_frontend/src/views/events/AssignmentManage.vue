@@ -5,8 +5,9 @@
         <div class="header" style="margin-bottom: 16px">
           <h3>{{ assignment.title || '作业管理' }}</h3>
           <div class="actions">
-            <button class="btn-modern warning sm-btn" @click="openEdit" style="width: 70px">
-              编辑作业
+            <button class="btn-modern warning sm-btn" @click="openEdit">
+              <i-lucide-pencil class="btn-icon" />
+              <span>编辑作业</span>
             </button>
           </div>
         </div>
@@ -125,9 +126,13 @@
               type="button"
               @click="load"
             >
-              搜索
+              <i-lucide-search class="btn-icon" />
+              <span>搜索</span>
             </button>
-            <button class="btn-modern ghost sm-btn" type="button" @click="reset">重置</button>
+            <button class="btn-modern ghost sm-btn" type="button" @click="reset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </el-form-item>
         </el-form>
       </div>
@@ -138,13 +143,9 @@
         <div class="header">
           <h3>队员作业批改</h3>
           <div class="actions">
-            <button
-              class="btn-modern success sm-btn"
-              @click="exportXlsx"
-              :disabled="exporting"
-              style="width: 70px"
-            >
-              导出成绩
+            <button class="btn-modern success sm-btn" @click="exportXlsx" :disabled="exporting">
+              <i-lucide-download class="btn-icon" />
+              <span>导出成绩</span>
             </button>
           </div>
         </div>
@@ -158,7 +159,7 @@
             <thead>
               <tr>
                 <th style="min-width: 90px">姓名</th>
-                <th style="min-width: 100px">学号</th>
+                <th style="min-width: 130px">学号</th>
                 <th style="min-width: 60px">声部</th>
                 <th style="min-width: 60px">梯队</th>
                 <th style="min-width: 70px">状态</th>
@@ -256,9 +257,9 @@
                     class="btn-modern primary xsm-btn"
                     :disabled="!row.id || row._loading"
                     @click="gradeRow(row)"
-                    style="width: 60px"
                   >
-                    {{ row._loading ? '...' : '提交批改' }}
+                    <i-lucide-check class="btn-icon" />
+                    <span>{{ row._loading ? '...' : '提交批改' }}</span>
                   </button>
                 </td>
               </tr>
@@ -313,7 +314,10 @@
           :auto-upload="false"
           multiple
         >
-          <button type="button" class="btn-modern primary sm-btn">选择附件</button>
+          <button type="button" class="btn-modern primary sm-btn">
+            <i-lucide-upload class="btn-icon" />
+            <span>选择附件</span>
+          </button>
           <template #tip>
             <div class="el-upload__tip">支持多文件上传，单个不超过 20MB</div>
           </template>
@@ -326,7 +330,8 @@
         @click="edit.visible = false"
         style="margin-right: 8px"
       >
-        取消
+        <i-lucide-x class="btn-icon" />
+        <span>取消</span>
       </button>
       <button
         class="btn-modern danger sm-btn"
@@ -334,10 +339,12 @@
         @click="confirmDelete"
         style="margin-right: 8px"
       >
-        {{ edit.deleting ? '删除中...' : '删除' }}
+        <i-lucide-trash-2 class="btn-icon" />
+        <span>{{ edit.deleting ? '删除中...' : '删除' }}</span>
       </button>
       <button class="btn-modern primary sm-btn" :disabled="edit.loading" @click="saveEdit">
-        {{ edit.loading ? '保存中...' : '保存' }}
+        <i-lucide-save class="btn-icon" />
+        <span>{{ edit.loading ? '保存中...' : '保存' }}</span>
       </button>
     </template>
   </el-dialog>
@@ -828,23 +835,30 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
 
 /* 操作列固定在右侧 */
@@ -861,6 +875,9 @@ export default {
   z-index: 1;
   background: #fff;
   border-left: 1px solid var(--border);
+}
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
 }
 
 .mono {
@@ -887,14 +904,12 @@ export default {
 }
 
 .assignment-row td {
-  max-height: 120px;
-  overflow: hidden;
+  max-height: none;
 }
 
 .cell-scrollable {
-  max-height: 110px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  max-height: none;
+  overflow: visible;
   padding: 4px 0;
 }
 

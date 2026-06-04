@@ -48,7 +48,8 @@
 
         <div class="form-item">
           <button type="submit" class="btn-modern primary w-full" :disabled="loading">
-            {{ loading ? '登录中...' : '登录' }}
+            <i-lucide-log-in class="btn-icon" />
+            <span>{{ loading ? '登录中...' : '登录' }}</span>
           </button>
         </div>
       </form>

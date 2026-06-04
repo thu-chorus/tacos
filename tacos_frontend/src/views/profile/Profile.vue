@@ -86,7 +86,8 @@
             <h3>个人信息</h3>
             <div class="actions">
               <button class="btn-modern primary sm-btn" @click="goEdit">
-                {{ profileActionText }}
+                <i-lucide-pencil class="btn-icon" />
+                <span>{{ profileActionText }}</span>
               </button>
             </div>
           </div>
@@ -192,7 +193,8 @@
                 :disabled="savingAlumniContact"
                 @click="openAlumniDialog"
               >
-                编辑校友信息
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑校友信息</span>
               </button>
             </div>
           </div>
@@ -295,7 +297,8 @@
             style="margin-right: 10px"
             @click="alumniDialog.visible = false"
           >
-            取消
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
           </button>
           <button
             class="btn-modern primary sm-btn"
@@ -303,7 +306,8 @@
             :disabled="savingAlumniContact"
             @click="handleSaveAlumniContact"
           >
-            保存
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
           </button>
         </template>
       </el-dialog>
@@ -313,7 +317,10 @@
           <div class="header" style="margin-bottom: 8px">
             <h3>已隐藏的信息</h3>
             <div class="actions">
-              <button class="btn-modern primary sm-btn" @click="openPrivacyDialog">隐私设置</button>
+              <button class="btn-modern primary sm-btn" @click="openPrivacyDialog">
+                <i-lucide-shield-check class="btn-icon" />
+                <span>隐私设置</span>
+              </button>
             </div>
           </div>
           <div class="hidden-info-grid">
@@ -397,7 +404,8 @@
             style="margin-right: 10px"
             @click="avatarCropDialog.visible = false"
           >
-            取消
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
           </button>
           <button
             class="btn-modern primary sm-btn"
@@ -405,7 +413,8 @@
             :disabled="uploadingAvatar"
             @click="handleCropAvatar"
           >
-            保存
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
           </button>
         </template>
       </el-dialog>
@@ -451,14 +460,16 @@
             @click="privacyDialog.visible = false"
             style="margin-right: 10px"
           >
-            取消
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
           </button>
           <button
             class="btn-modern primary sm-btn"
             :loading="savingPrivacy"
             @click="handleSavePrivacy"
           >
-            保存
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
           </button>
         </template>
       </el-dialog>
@@ -481,14 +492,16 @@
             @click="passwordDialog.visible = false"
             style="margin-right: 10px"
           >
-            取消
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
           </button>
           <button
             class="btn-modern primary sm-btn"
             :loading="savingPassword"
             @click="handleChangePassword"
           >
-            提交
+            <i-lucide-key-round class="btn-icon" />
+            <span>提交</span>
           </button>
         </template>
       </el-dialog>

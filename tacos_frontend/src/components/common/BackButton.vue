@@ -1,9 +1,7 @@
 <template>
   <button class="btn-modern ghost sm-btn back-btn" @click="handleClick" :aria-label="text">
-    <svg class="icon-left" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-    {{ text }}
+    <i-lucide-arrow-left class="btn-icon" />
+    <span>{{ text }}</span>
   </button>
 </template>
 
@@ -59,14 +57,5 @@ export default {
   &:active {
     transform: translateY(1px) scale(0.98);
   }
-}
-
-.icon-left {
-  width: 16px;
-  height: 16px;
-  margin-right: 0px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
 }
 </style>

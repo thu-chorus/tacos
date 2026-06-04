@@ -8,8 +8,14 @@
       <h2 class="error-subtitle">页面不存在</h2>
       <p class="error-description">抱歉，您访问的页面不存在或已被删除。</p>
       <div class="error-actions">
-        <button class="btn-modern primary" @click="goHome">返回首页</button>
-        <button class="btn-modern ghost" @click="goBack">返回上页</button>
+        <button class="btn-modern primary" @click="goHome">
+          <i-lucide-house class="btn-icon" />
+          <span>返回首页</span>
+        </button>
+        <button class="btn-modern ghost" @click="goBack">
+          <i-lucide-arrow-left class="btn-icon" />
+          <span>返回上页</span>
+        </button>
       </div>
     </div>
   </div>

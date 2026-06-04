@@ -10,7 +10,8 @@
               type="button"
               @click="showBulkDialog = true"
             >
-              批量新增
+              <i-lucide-user-plus class="btn-icon" />
+              <span>批量新增</span>
             </button>
           </div>
         </div>
@@ -320,9 +321,14 @@
               @click="handleSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '更新' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-user-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '更新' : '创建' }}</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>
@@ -367,7 +373,8 @@
           @click="handleDownloadTemplate"
           :disabled="downloadingTemplate"
         >
-          {{ downloadingTemplate ? '下载中...' : '下载模板' }}
+          <i-lucide-download class="btn-icon" />
+          <span>{{ downloadingTemplate ? '下载中...' : '下载模板' }}</span>
         </button>
       </div>
       <div style="padding: 0 28px 8px 28px; display: flex; align-items: center; gap: 12px">
@@ -397,13 +404,17 @@
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px">
-        <button class="btn-modern ghost sm-btn" @click="showBulkDialog = false">关闭</button>
+        <button class="btn-modern ghost sm-btn" @click="showBulkDialog = false">
+          <i-lucide-x class="btn-icon" />
+          <span>关闭</span>
+        </button>
         <button
           class="btn-modern primary sm-btn"
           :disabled="!selectedFile || importing"
           @click="handleBulkImport"
         >
-          {{ importing ? '导入中...' : '开始导入' }}
+          <i-lucide-upload class="btn-icon" />
+          <span>{{ importing ? '导入中...' : '开始导入' }}</span>
         </button>
       </div>
 

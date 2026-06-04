@@ -9,7 +9,8 @@
           </div>
           <div class="actions">
             <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="goCreate">
-              创建活动
+              <i-lucide-calendar-plus class="btn-icon" />
+              <span>创建活动</span>
             </button>
           </div>
         </div>
@@ -52,9 +53,13 @@
               type="button"
               @click="handleSearch"
             >
-              搜索
+              <i-lucide-search class="btn-icon" />
+              <span>搜索</span>
             </button>
-            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">重置</button>
+            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </el-form-item>
         </el-form>
       </div>
@@ -76,16 +81,25 @@
             <span class="loading-spinner" />
             <span class="loading-text">加载中...</span>
           </div>
-          <table class="data-table" v-else>
+          <table class="data-table my-event-table" v-else>
+            <colgroup>
+              <col class="table-col-event-name" />
+              <col class="table-col-status" />
+              <col class="table-col-visibility" />
+              <col class="table-col-role" />
+              <col class="table-col-date" />
+              <col class="table-col-date" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 220px">名称</th>
-                <th style="min-width: 120px">状态</th>
-                <th style="min-width: 160px">面向</th>
-                <th style="min-width: 80px">角色</th>
-                <th style="min-width: 140px">开始日期</th>
-                <th style="min-width: 140px">结束日期</th>
-                <th class="sticky-right" style="min-width: 120px">操作</th>
+                <th class="event-name-col">名称</th>
+                <th class="center-col">状态</th>
+                <th class="center-col">面向</th>
+                <th class="center-col">角色</th>
+                <th class="center-col">开始日期</th>
+                <th class="center-col">结束日期</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -93,21 +107,21 @@
                 <td colspan="7" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in myTableData" :key="row.id">
-                <td>
+                <td class="event-name-col">
                   <router-link
                     :to="`/events/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
                     >{{ row.name }}</router-link
                   >
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="getStatusType(getStatus(row))">{{ getStatus(row) }}</el-tag>
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="getVisibilityType(row.visibility)">{{
                     getVisibilityLabel(row.visibility)
                   }}</el-tag>
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag
                     :type="
                       row.relation === 'event_admin'
@@ -126,17 +140,21 @@
                     }}
                   </el-tag>
                 </td>
-                <td>{{ formatDate(row.start_date) }}</td>
-                <td>{{ formatDate(row.end_date) }}</td>
-                <td class="sticky-right">
+                <td class="center-col">{{ formatDate(row.start_date) }}</td>
+                <td class="center-col">{{ formatDate(row.end_date) }}</td>
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">查看</button>
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
+                    </button>
                     <button
                       v-if="isAdmin || row.relation === 'event_admin'"
                       class="btn-modern warning xsm-btn"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </td>
@@ -166,20 +184,17 @@
                     </div>
                   </div>
                   <div class="row-actions">
-                    <button
-                      class="btn-modern ghost xsm-btn"
-                      style="width: 38px"
-                      @click="handleView(row)"
-                    >
-                      查看
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
                     </button>
                     <button
                       v-if="isAdmin || row.relation === 'event_admin'"
                       class="btn-modern primary xsm-btn"
-                      style="width: 38px"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </div>
@@ -252,15 +267,23 @@
             <span class="loading-spinner" />
             <span class="loading-text">加载中...</span>
           </div>
-          <table class="data-table" v-else>
+          <table class="data-table other-event-table" v-else>
+            <colgroup>
+              <col class="table-col-event-name" />
+              <col class="table-col-status" />
+              <col class="table-col-visibility" />
+              <col class="table-col-date" />
+              <col class="table-col-date" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 220px">名称</th>
-                <th style="min-width: 120px">状态</th>
-                <th style="min-width: 160px">面向</th>
-                <th style="min-width: 140px">开始日期</th>
-                <th style="min-width: 140px">结束日期</th>
-                <th class="sticky-right" style="min-width: 120px">操作</th>
+                <th class="event-name-col">名称</th>
+                <th class="center-col">状态</th>
+                <th class="center-col">面向</th>
+                <th class="center-col">开始日期</th>
+                <th class="center-col">结束日期</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -268,31 +291,35 @@
                 <td colspan="6" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in otherTableData" :key="row.id">
-                <td>
+                <td class="event-name-col">
                   <router-link
                     :to="`/events/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
                     >{{ row.name }}</router-link
                   >
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="getStatusType(getStatus(row))">{{ getStatus(row) }}</el-tag>
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="getVisibilityType(row.visibility)">{{
                     getVisibilityLabel(row.visibility)
                   }}</el-tag>
                 </td>
-                <td>{{ formatDate(row.start_date) }}</td>
-                <td>{{ formatDate(row.end_date) }}</td>
-                <td class="sticky-right">
+                <td class="center-col">{{ formatDate(row.start_date) }}</td>
+                <td class="center-col">{{ formatDate(row.end_date) }}</td>
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">查看</button>
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
+                    </button>
                     <button
                       v-if="isAdmin || row.relation === 'event_admin'"
                       class="btn-modern warning xsm-btn"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </td>
@@ -322,20 +349,17 @@
                     </div>
                   </div>
                   <div class="row-actions">
-                    <button
-                      class="btn-modern ghost xsm-btn"
-                      style="width: 38px"
-                      @click="handleView(row)"
-                    >
-                      查看
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
                     </button>
                     <button
                       v-if="isAdmin || row.relation === 'event_admin'"
                       class="btn-modern primary xsm-btn"
-                      style="width: 38px"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </div>
@@ -678,6 +702,8 @@ export default {
 <style scoped>
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 .table-wrapper {
@@ -701,23 +727,69 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table.my-event-table {
+  min-width: 1106px;
+}
+.data-table.other-event-table {
+  min-width: 974px;
+}
+.data-table .table-col-event-name {
+  width: 280px;
+}
+.data-table.other-event-table .table-col-event-name {
+  width: 320px;
+}
+.data-table .table-col-status,
+.data-table .table-col-role {
+  width: 132px;
+}
+.data-table .table-col-visibility {
+  width: 150px;
+}
+.data-table .table-col-date {
+  width: 140px;
+}
+.data-table .table-col-action {
+  width: 132px;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
+}
+.data-table .center-col {
+  text-align: center;
+}
+.data-table .event-name-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.data-table .action-col {
+  text-align: center;
+}
+.data-table .action-col .row-actions {
+  justify-content: center;
 }
 
 .card {
@@ -755,18 +827,28 @@ export default {
   background: #fff;
   border-left: 1px solid var(--border);
 }
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
+}
 
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 .event-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 16px 18px;
   background: #fff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.event-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 .event-card .card-head {
   display: flex;

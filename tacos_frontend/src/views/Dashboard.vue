@@ -25,7 +25,7 @@
               v-if="isAdmin"
               @click="navigateTo('/announcements')"
             >
-              <i-lucide-settings class="mr" />
+              <i-lucide-settings class="btn-icon" />
               <div class="ann-manage-btn-text" style="font-weight: bold">管理公告</div>
             </button>
             <div class="divider" />

@@ -13,7 +13,8 @@
             <h3>{{ assignment.title || '作业详情' }}</h3>
             <div class="actions">
               <button v-if="canManage" class="btn-modern primary sm-btn" @click="goManage">
-                管理
+                <i-lucide-settings class="btn-icon" />
+                <span>管理</span>
               </button>
             </div>
           </div>
@@ -227,7 +228,8 @@
               multiple
             >
               <button type="button" class="btn-modern ghost sm-btn" :disabled="!canSubmit">
-                选择文件
+                <i-lucide-upload class="btn-icon" />
+                <span>选择文件</span>
               </button>
               <template #tip>
                 <div class="el-upload__tip">支持图片、音频等常见格式，每个不超过 5MB</div>
@@ -247,18 +249,19 @@
             type="button"
             class="btn-modern ghost sm-btn"
             @click="submitDialog.visible = false"
-            style="min-width: 50px; margin-right: 10px"
+            style="margin-right: 10px"
           >
-            取消
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
           </button>
           <button
             type="button"
             class="btn-modern primary sm-btn"
             :disabled="!canSubmit || submitting"
             @click="doSubmit"
-            style="min-width: 50px"
           >
-            {{ submitting ? '提交中...' : '提交' }}
+            <i-lucide-send class="btn-icon" />
+            <span>{{ submitting ? '提交中...' : '提交' }}</span>
           </button>
         </template>
       </el-dialog>
