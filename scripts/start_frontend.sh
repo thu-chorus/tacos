@@ -211,7 +211,7 @@ VITE_DEV_MODE=true
 
 # 应用配置
 VITE_APP_TITLE=TaCOS - 清华合唱队在线系统
-VITE_APP_VERSION=2.1.0
+VITE_APP_VERSION=2.3.0
 
 # 生成时间
 VITE_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -231,7 +231,7 @@ VITE_API_BASE_URL=/api/v1
 VITE_DEBUG=false
 VITE_DEV_MODE=false
 VITE_APP_TITLE=TaCOS - 清华合唱队在线系统
-VITE_APP_VERSION=2.1.0
+VITE_APP_VERSION=2.3.0
 VITE_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 EOF
 
