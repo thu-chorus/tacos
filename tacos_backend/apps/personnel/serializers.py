@@ -473,9 +473,12 @@ class MemberSerializer(serializers.ModelSerializer):
     def get_titles(self, obj: Member) -> list[dict[str, Any]]:
         # 称号始终可见，不受 hidden_fields 影响，因此单独组装
         items = []
-        for mt in (
-            obj.member_titles.select_related("title").all().order_by("-awarded_at")
-        ):
+        member_titles = getattr(obj, "prefetched_member_titles", None)
+        if member_titles is None:
+            member_titles = obj.member_titles.select_related("title").order_by(
+                "-awarded_at"
+            )
+        for mt in member_titles:
             t = mt.title
             items.append(
                 {

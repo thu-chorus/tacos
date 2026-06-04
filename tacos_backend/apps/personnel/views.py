@@ -1,5 +1,6 @@
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.db.models import Prefetch, prefetch_related_objects
 from django.http import HttpResponse
 from django.utils import timezone
 
@@ -37,6 +38,19 @@ class MemberViewSet(EnvelopeModelViewSet):
     permission_classes = [IsAdminOrSelfReadOnly]
     lookup_field = "public_id"
 
+    def _prefetch_list_relations(self, items) -> None:
+        prefetch_related_objects(
+            items,
+            "alumni_profile",
+            Prefetch(
+                "member_titles",
+                queryset=MemberTitle.objects.select_related("title").order_by(
+                    "-awarded_at"
+                ),
+                to_attr="prefetched_member_titles",
+            ),
+        )
+
     def get_permissions(self):  # type: ignore[override]
         """更新成员时使用本人或管理员权限，其余操作使用默认成员权限。"""
         if self.action in ("update", "partial_update", "avatar"):
@@ -54,8 +68,10 @@ class MemberViewSet(EnvelopeModelViewSet):
 
         page = self.paginate_queryset(items)
         if page is not None:
+            self._prefetch_list_relations(page)
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
+        self._prefetch_list_relations(items)
         serializer = self.get_serializer(items, many=True)
         return Response(serializer.data)
 

@@ -15,13 +15,18 @@
           <div class="cd-desc">{{ description }}</div>
         </div>
         <div class="cd-footer">
-          <button class="btn-modern ghost sm-btn" @click="onCancel">{{ cancelText }}</button>
+          <button class="btn-modern ghost sm-btn" @click="onCancel">
+            <i-lucide-x class="btn-icon" />
+            <span>{{ cancelText }}</span>
+          </button>
           <button
             class="btn-modern sm-btn"
             :class="danger ? 'danger' : 'primary'"
             @click="onConfirm"
           >
-            {{ confirmText }}
+            <i-lucide-trash-2 v-if="danger" class="btn-icon" />
+            <i-lucide-check v-else class="btn-icon" />
+            <span>{{ confirmText }}</span>
           </button>
         </div>
       </div>

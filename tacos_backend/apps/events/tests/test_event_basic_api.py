@@ -1,6 +1,13 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from datetime import timedelta
+from io import BytesIO
 
+from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
+
+from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
 from apps.events.models import Event
@@ -138,3 +145,125 @@ class EventBasicApiTest(TestCase):
         data_after_join = res_detail_after_join.json()["data"]
         self.assertEqual(data_after_join.get("relation"), "event_admin")
         self.assertEqual(data_after_join.get("is_participant"), True)
+
+    def test_event_admin_can_manage_without_joining(self):
+        """活动管理员不在参与者列表中时仍可管理活动。"""
+        self._auth("m10001", "Pass1001")
+        event = Event.objects.get(public_id=self.event_id)
+        self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())
+
+        detail_response = self.client.get(f"/api/v1/events/{self.event_id}/")
+        self.assertEqual(detail_response.status_code, 200, detail_response.json())
+        detail = detail_response.json()["data"]
+        self.assertEqual(detail.get("relation"), "event_admin")
+        self.assertEqual(detail.get("is_participant"), False)
+
+        admin_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/admin-detail/"
+        )
+        self.assertEqual(admin_response.status_code, 200, admin_response.json())
+
+        sessions_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/checkin/sessions/"
+        )
+        self.assertEqual(sessions_response.status_code, 200, sessions_response.json())
+
+        create_session_response = self.client.post(
+            f"/api/v1/events/{self.event_id}/checkin/start/",
+            {"name": "排练签到", "type": "NONE"},
+            format="json",
+        )
+        self.assertEqual(
+            create_session_response.status_code,
+            201,
+            create_session_response.json(),
+        )
+
+        create_assignment_response = self.client.post(
+            f"/api/v1/events/{self.event_id}/assignments/create/",
+            {
+                "title": "录音作业",
+                "description": "",
+                "deadline": (timezone.now() + timedelta(days=1)).isoformat(),
+            },
+            format="json",
+        )
+        self.assertEqual(
+            create_assignment_response.status_code,
+            201,
+            create_assignment_response.json(),
+        )
+
+        assignments_response = self.client.get(
+            f"/api/v1/events/{self.event_id}/assignments/"
+        )
+        self.assertEqual(
+            assignments_response.status_code, 200, assignments_response.json()
+        )
+        self.assertEqual(assignments_response.json()["data"]["count"], 1)
+
+        members_response = self.client.get(f"/api/v1/events/{self.event_id}/members/")
+        self.assertEqual(members_response.status_code, 200, members_response.json())
+
+        event.refresh_from_db()
+        self.assertFalse(event.participants.filter(pk=self.member1.pk).exists())
+
+    def test_site_admin_can_export_event_members(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("admin001", "AdminPass123")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            response["Content-Type"],
+        )
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        self.assertEqual(sheet["A1"].value, "学号")
+        self.assertEqual(sheet["A2"].value, "m10002")
+        self.assertEqual(sheet["B2"].value, "Member2")
+
+    def test_event_admin_can_export_event_members_without_joining(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("m10001", "Pass1001")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        exported_user_ids = [row[0].value for row in sheet.iter_rows(min_row=2)]
+        self.assertEqual(exported_user_ids, ["m10002"])
+
+    def test_participant_cannot_export_event_members(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("m10002", "Pass1002")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 403, response.json())
+
+    def test_event_list_prefetches_relation_checks(self):
+        for index in range(5):
+            event = Event.objects.create(
+                name=f"列表活动{index}",
+                introduction="排练",
+                start_date="2026-01-01",
+                end_date="2026-01-02",
+                visibility="ALL",
+            )
+            event.admins.add(self.member1)
+            if index % 2 == 0:
+                event.participants.add(self.member2)
+
+        self.client.force_authenticate(user=self.user2)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get("/api/v1/events/", {"page_size": 10})
+
+        self.assertEqual(response.status_code, 200, response.json())
+        self.assertLessEqual(len(ctx), 8)

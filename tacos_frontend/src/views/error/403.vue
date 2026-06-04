@@ -8,8 +8,14 @@
       <h2 class="error-subtitle">权限不足</h2>
       <p class="error-description">抱歉，您没有权限访问此页面。请联系管理员获取相应权限。</p>
       <div class="error-actions">
-        <button class="btn-modern primary" @click="goHome">返回首页</button>
-        <button class="btn-modern ghost" @click="goBack">返回上页</button>
+        <button class="btn-modern primary" @click="goHome">
+          <i-lucide-house class="btn-icon" />
+          <span>返回首页</span>
+        </button>
+        <button class="btn-modern ghost" @click="goBack">
+          <i-lucide-arrow-left class="btn-icon" />
+          <span>返回上页</span>
+        </button>
       </div>
     </div>
   </div>

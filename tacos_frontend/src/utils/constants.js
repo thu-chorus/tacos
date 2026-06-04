@@ -1025,7 +1025,7 @@ export const CITIES = {
     'Congo, Democratic Republic of the	刚果民主共和国',
     'Congo, Republic of the	刚果共和国',
     'Costa Rica	哥斯达黎加',
-    'Cote d\'Ivoire	科特迪瓦',
+    "Cote d'Ivoire	科特迪瓦",
     'Croatia	克罗地亚',
     'Cuba	古巴',
     'Cyprus	塞浦路斯',

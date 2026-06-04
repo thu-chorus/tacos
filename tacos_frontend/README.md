@@ -158,6 +158,7 @@ src/
 │   ├── constants.js   # 常量定义
 │   ├── download.js    # 下载工具
 │   ├── format.js      # 格式化工具
+│   ├── requestCache.js # 前端请求缓存
 │   └── validation.js  # 验证工具
 ├── views/             # 页面组件
 │   ├── Home.vue       # 首页
@@ -266,6 +267,8 @@ VITE_DEV_MODE=false
 ## API接口
 
 后端API接口遵循RESTful设计规范，基础URL为 `/api/v1`。
+
+前端 API 模块对个人档案、详情页和短期列表数据使用内存缓存，并合并同一缓存键的并发请求。涉及登录登出、头像、成员、活动、乐谱、称号等写操作时会失效相关缓存。
 
 ### 认证相关
 - `POST /auth/login` - 用户登录

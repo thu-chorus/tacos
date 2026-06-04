@@ -1,120 +1,139 @@
 <template>
   <div class="page-container">
-    <div class="card">
-      <div class="card-content" v-loading="loading" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 20px">
-          <h3>{{ sheet?.title || '乐谱详情' }}</h3>
-          <div class="actions">
-            <button v-if="isAdmin" class="btn-modern warning sm-btn" @click="edit">编辑</button>
-          </div>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="label">曲名</div>
-            <div class="value">{{ sheet?.title || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">作词</div>
-            <div class="value">{{ sheet?.lyricist || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">作曲</div>
-            <div class="value">{{ sheet?.composer || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">编曲</div>
-            <div class="value">{{ sheet?.arranger || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">版权说明</div>
-            <div class="value">{{ sheet?.copyright_notice || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">版权限制</div>
-            <div class="value">
-              <el-tag :type="sheet?.is_restricted ? 'danger' : 'success'">
-                {{ sheet?.is_restricted ? '受限' : '公开' }}
-              </el-tag>
-            </div>
-          </div>
-          <div v-if="isAdmin" class="info-item">
-            <div class="label">可见范围</div>
-            <div class="value">
-              <span v-if="sheet?.visible_to_all">全员</span>
-              <span v-else>
-                自定义（活动 {{ (sheet?.visible_events || []).length }} 个，队员
-                {{ (sheet?.visible_members || []).length }} 人）
-              </span>
-            </div>
-          </div>
-          <div v-if="isAdmin && !sheet?.visible_to_all" class="info-item">
-            <div class="label">可见活动</div>
-            <div class="value">
-              <div class="tag-list">
-                <el-tag v-for="e in sheet?.visible_events || []" :key="e.id">
-                  <el-link type="primary" @click="goEvent(e)">{{ e.name }}</el-link>
-                </el-tag>
-              </div>
-            </div>
-          </div>
-          <div v-if="isAdmin && !sheet?.visible_to_all" class="info-item">
-            <div class="label">可见队员</div>
-            <div class="value">
-              <div class="tag-list">
-                <el-tag v-for="m in sheet?.visible_members || []" :key="m.id">
-                  {{ m.name }}（{{ m.user_id }}）
-                </el-tag>
-              </div>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="label">简介</div>
-            <div class="value">{{ sheet?.introduction || '—' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="label">上传时间</div>
-            <div class="value">{{ formatDateTime(sheet?.upload_time) }}</div>
-          </div>
-        </div>
+    <div v-if="!pageLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
       </div>
     </div>
-    <div class="card" style="margin-top: 10px">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 10px">
-          <h3>PDF 预览</h3>
-          <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="download">下载</button>
+
+    <template v-else>
+      <div class="card">
+        <div class="card-content" v-loading="loading" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 20px">
+            <h3>{{ sheet?.title || '乐谱详情' }}</h3>
+            <div class="actions">
+              <button v-if="isAdmin" class="btn-modern warning sm-btn" @click="edit">
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑</span>
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="preview-section">
-          <div
-            class="preview-container"
-            v-loading="pdfLoading"
-            element-loading-text="正在生成预览..."
-          >
-            <template v-if="pdfUrl">
-              <iframe v-if="!isIOS" class="pdf-frame" :src="pdfUrl" title="sheet-preview"></iframe>
-              <div v-else class="ios-preview-warning">
-                <div class="ios-pdf-container">
-                  <object :data="pdfUrl" type="application/pdf" class="pdf-object">
-                    <p>无法显示PDF，请点击上方按钮下载</p>
-                  </object>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">曲名</div>
+              <div class="value">{{ sheet?.title || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">作词</div>
+              <div class="value">{{ sheet?.lyricist || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">作曲</div>
+              <div class="value">{{ sheet?.composer || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">编曲</div>
+              <div class="value">{{ sheet?.arranger || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">版权说明</div>
+              <div class="value">{{ sheet?.copyright_notice || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">版权限制</div>
+              <div class="value">
+                <el-tag :type="sheet?.is_restricted ? 'danger' : 'success'">
+                  {{ sheet?.is_restricted ? '受限' : '公开' }}
+                </el-tag>
+              </div>
+            </div>
+            <div v-if="isAdmin" class="info-item">
+              <div class="label">可见范围</div>
+              <div class="value">
+                <span v-if="sheet?.visible_to_all">全员</span>
+                <span v-else>
+                  自定义（活动 {{ (sheet?.visible_events || []).length }} 个，队员
+                  {{ (sheet?.visible_members || []).length }} 人）
+                </span>
+              </div>
+            </div>
+            <div v-if="isAdmin && !sheet?.visible_to_all" class="info-item">
+              <div class="label">可见活动</div>
+              <div class="value">
+                <div class="tag-list">
+                  <el-tag v-for="e in sheet?.visible_events || []" :key="e.id">
+                    <el-link type="primary" @click="goEvent(e)">{{ e.name }}</el-link>
+                  </el-tag>
                 </div>
               </div>
-            </template>
-            <template v-else-if="!pdfLoading">
-              <el-empty description="预览不可用，请使用右上角'下载'按钮" />
-            </template>
+            </div>
+            <div v-if="isAdmin && !sheet?.visible_to_all" class="info-item">
+              <div class="label">可见队员</div>
+              <div class="value">
+                <div class="tag-list">
+                  <el-tag v-for="m in sheet?.visible_members || []" :key="m.id">
+                    {{ m.name }}（{{ m.user_id }}）
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="label">简介</div>
+              <div class="value">{{ sheet?.introduction || '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">上传时间</div>
+              <div class="value">{{ formatDateTime(sheet?.upload_time) }}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <div class="card" style="margin-top: 10px">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 10px">
+            <h3>PDF 预览</h3>
+            <div class="actions">
+              <button class="btn-modern primary sm-btn" @click="download">
+                <i-lucide-download class="btn-icon" />
+                <span>下载</span>
+              </button>
+            </div>
+          </div>
+          <div class="preview-section">
+            <div
+              class="preview-container"
+              v-loading="pdfLoading"
+              element-loading-text="正在生成预览..."
+            >
+              <template v-if="pdfUrl">
+                <iframe
+                  v-if="!isIOS"
+                  class="pdf-frame"
+                  :src="pdfUrl"
+                  title="sheet-preview"
+                ></iframe>
+                <div v-else class="ios-preview-warning">
+                  <div class="ios-pdf-container">
+                    <object :data="pdfUrl" type="application/pdf" class="pdf-object">
+                      <p>无法显示PDF，请点击上方按钮下载</p>
+                    </object>
+                  </div>
+                </div>
+              </template>
+              <template v-else-if="!pdfLoading">
+                <el-empty description="预览不可用，请使用右上角'下载'按钮" />
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
@@ -125,8 +144,10 @@ import {
   getDownloadTaskStatus
 } from '@/api/sheets'
 import { formatDateTime } from '@/utils/format'
+import PageLoading from '@/components/common/PageLoading.vue'
 export default {
   name: 'SheetDetail',
+  components: { PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -134,13 +155,16 @@ export default {
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
-    const sheetId = route.params.id
+    const sheetId = computed(() => route.params.id)
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const sheet = ref(null)
     const pdfUrl = ref('')
     const pdfLoading = ref(false)
     let previewPollTimer = null
     let disposed = false
+    let detailRequestSeq = 0
+    let previewRequestSeq = 0
     const previewPollIntervals = [1000, 1500, 2500, 4000, 6000, 8000, 10000]
     const previewPollTimeoutMs = 5 * 60 * 1000
 
@@ -150,19 +174,31 @@ export default {
       return /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in document)
     })
 
-    const load = async () => {
+    const load = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      const currentSheetId = sheetId.value
+      if (reset) {
+        pageLoaded.value = false
+        sheet.value = null
+      }
       loading.value = true
       try {
-        const res = await getSheetDetail(sheetId)
+        const res = await getSheetDetail(currentSheetId)
+        if (requestSeq !== detailRequestSeq || String(currentSheetId) !== String(sheetId.value)) {
+          return
+        }
         sheet.value = res.data
         // 设置分享页面信息
         if (sheet.value?.title) {
           store.dispatch('common/setSharePageInfo', `乐谱「${sheet.value.title}」`)
         }
+        pageLoaded.value = true
       } catch (e) {
         notify.error('加载失败')
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -182,19 +218,20 @@ export default {
     const edit = () => {
       // 传递详情页的返回目标给编辑页，编辑页保存后返回详情页时保留原 ref
       const backDest = getBackDestination()
-      router.push(`/sheets/${sheetId}/edit?ref=${encodeURIComponent(backDest)}`)
+      router.push(`/sheets/${sheetId.value}/edit?ref=${encodeURIComponent(backDest)}`)
     }
     const goEvent = e => {
       if (!e || !e.id) {
         return
       }
-      router.push({ path: `/events/${e.id}`, query: { ref: `/sheets/${sheetId}` } })
+      router.push({ path: `/events/${e.id}`, query: { ref: `/sheets/${sheetId.value}` } })
     }
     const download = async () => {
       const loadingMsg = notify.loading('正在生成PDF，请稍候...')
+      const fallbackFilename = `${sheet.value?.title || 'sheet'}.pdf`
 
       try {
-        const initResp = await initiateDownload(sheetId)
+        const initResp = await initiateDownload(sheetId.value)
         const taskId = initResp.data?.task_id
 
         if (!taskId) {
@@ -224,7 +261,7 @@ export default {
               loadingMsg.close()
 
               const blob = new Blob([resp.data], { type: 'application/pdf' })
-              let filename = `${sheet.value?.title || 'sheet'}.pdf`
+              let filename = fallbackFilename
 
               const cd = resp.headers['content-disposition'] || resp.headers['Content-Disposition']
               if (cd && cd.includes('filename=')) {
@@ -277,10 +314,17 @@ export default {
     }
 
     const loadPreview = async () => {
+      const requestSeq = ++previewRequestSeq
+      const currentSheetId = sheetId.value
+      if (previewPollTimer) {
+        window.clearTimeout(previewPollTimer)
+        previewPollTimer = null
+      }
+      clearPdfUrl()
       pdfLoading.value = true
 
       try {
-        const initResp = await initiateDownload(sheetId, { preview: true })
+        const initResp = await initiateDownload(currentSheetId, { preview: true })
         const taskId = initResp.data?.task_id
         const streamUrl = initResp.data?.stream_url
 
@@ -297,11 +341,22 @@ export default {
         }
 
         const pollTask = async () => {
-          if (disposed) {
+          if (
+            disposed ||
+            requestSeq !== previewRequestSeq ||
+            String(currentSheetId) !== String(sheetId.value)
+          ) {
             return
           }
           try {
             const resp = await getDownloadTaskStatus(taskId)
+            if (
+              disposed ||
+              requestSeq !== previewRequestSeq ||
+              String(currentSheetId) !== String(sheetId.value)
+            ) {
+              return
+            }
             const taskStatus = resp.data?.status
 
             if (taskStatus === 'PENDING' || taskStatus === 'PROCESSING') {
@@ -325,6 +380,9 @@ export default {
               console.error('Unexpected task status')
             }
           } catch (pollError) {
+            if (requestSeq !== previewRequestSeq) {
+              return
+            }
             clearPdfUrl()
             pdfLoading.value = false
             console.error('Preview polling error:', pollError)
@@ -333,6 +391,9 @@ export default {
 
         pollTask()
       } catch (e) {
+        if (requestSeq !== previewRequestSeq) {
+          return
+        }
         clearPdfUrl()
         pdfLoading.value = false
         console.error('Preview error:', e)
@@ -340,12 +401,21 @@ export default {
     }
 
     onMounted(() => {
-      load()
+      load({ reset: true })
       loadPreview()
     })
 
+    watch(
+      () => route.params.id,
+      () => {
+        load({ reset: true })
+        loadPreview()
+      }
+    )
+
     onUnmounted(() => {
       disposed = true
+      previewRequestSeq += 1
       if (previewPollTimer) {
         window.clearTimeout(previewPollTimer)
       }
@@ -356,6 +426,7 @@ export default {
       goBack,
       sheet,
       loading,
+      pageLoaded,
       edit,
       isAdmin,
       download,

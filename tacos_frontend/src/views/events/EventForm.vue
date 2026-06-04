@@ -6,7 +6,9 @@
           <h3>{{ isEdit ? '编辑活动' : '创建活动' }}</h3>
         </div>
 
-        <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else :model="form" :rules="rules" ref="formRef" label-width="100px">
           <el-form-item label="名称" prop="name">
             <el-input v-model="form.name" placeholder="请输入活动名称" />
           </el-form-item>
@@ -94,7 +96,10 @@
                   accept="image/png,image/jpeg,image/gif"
                   :on-change="onAnnImageChange"
                 >
-                  <button type="button" class="btn-modern primary xsm-btn">上传图片</button>
+                  <button type="button" class="btn-modern primary xsm-btn">
+                    <i-lucide-image-plus class="btn-icon" />
+                    <span>上传图片</span>
+                  </button>
                 </el-upload>
               </div>
             </div>
@@ -176,7 +181,8 @@
                 :loading="importingTier === 'SECOND'"
                 @click="importSecondTier"
               >
-                一键导入二队成员
+                <i-lucide-user-plus class="btn-icon" />
+                <span>一键导入二队成员</span>
               </button>
               <button
                 class="btn-modern ghost sm-btn"
@@ -184,7 +190,8 @@
                 :loading="importingTier === 'FIRST'"
                 @click="importFirstTier"
               >
-                一键导入一队成员
+                <i-lucide-user-plus class="btn-icon" />
+                <span>一键导入一队成员</span>
               </button>
             </div>
           </el-form-item>
@@ -199,12 +206,18 @@
               @click="onSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '保存' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-calendar-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '保存' : '创建' }}</span>
             </button>
             <button v-if="isEdit" class="btn-modern danger" type="button" @click="deleteEvent">
-              删除活动
+              <i-lucide-trash-2 class="btn-icon" />
+              <span>删除活动</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>
@@ -239,15 +252,17 @@ import {
 import { getSheetList } from '@/api/sheets'
 import { Close } from '@element-plus/icons-vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PageLoading from '@/components/common/PageLoading.vue'
 
 export default {
   name: 'EventForm',
-  components: { ConfirmDialog },
+  components: { ConfirmDialog, PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
     const isEdit = computed(() => !!route.params.id)
+    const formReady = ref(!isEdit.value)
     const eventIdForApi = computed(() => route.params.id)
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
 
@@ -255,6 +270,9 @@ export default {
     const submitting = ref(false)
     const annImages = ref([])
     const annStage = ref({ add: [], removeIds: new Set() })
+    let memberQuerySeq = 0
+    let sheetQuerySeq = 0
+    let detailRequestSeq = 0
     const form = reactive({
       name: '',
       introduction: '',
@@ -370,6 +388,7 @@ export default {
     }
 
     const queryMembers = async query => {
+      const requestSeq = ++memberQuerySeq
       loadingMembers.value = true
       try {
         const params = { page_size: 1000 }
@@ -383,6 +402,9 @@ export default {
           }
         }
         const res = await getMemberList(params)
+        if (requestSeq !== memberQuerySeq) {
+          return
+        }
         const fetched = res.data?.results || res.data || []
         const mergedMap = new Map()
         fetched.forEach(m => mergedMap.set(m.id, m))
@@ -395,7 +417,9 @@ export default {
         }
         memberOptions.value = Array.from(mergedMap.values())
       } finally {
-        loadingMembers.value = false
+        if (requestSeq === memberQuerySeq) {
+          loadingMembers.value = false
+        }
       }
     }
 
@@ -470,10 +494,17 @@ export default {
     const importSecondTier = () => importTierMembers('二队')
 
     const loadDetailIfEdit = async () => {
+      const requestSeq = ++detailRequestSeq
+      const eventId = eventIdForApi.value
       if (!isEdit.value) {
+        formReady.value = true
         return
       }
-      const res = await getEventAdminDetail(eventIdForApi.value)
+      formReady.value = false
+      const res = await getEventAdminDetail(eventId)
+      if (requestSeq !== detailRequestSeq || String(eventId) !== String(eventIdForApi.value)) {
+        return
+      }
       const d = res.data
       form.name = d.name
       form.introduction = d.introduction
@@ -492,6 +523,7 @@ export default {
       const seedMap = new Map()
       ;(selectedSeed.value || []).forEach(m => seedMap.set(m.id, m))
       memberOptions.value = Array.from(seedMap.values())
+      formReady.value = true
     }
 
     const onSubmit = () => {
@@ -608,21 +640,33 @@ export default {
     const isAnnMarkedDelete = imageId => annStage.value.removeIds.has(imageId)
 
     const querySheets = async query => {
+      const requestSeq = ++sheetQuerySeq
       loadingSheets.value = true
       try {
-        const params = { page_size: 1000, ordering: '-upload_time' }
+        const params = { page_size: 1000 }
         const q = query && String(query).trim()
         if (q) {
           params.search = q
         }
         const res = await getSheetList(params)
+        if (requestSeq !== sheetQuerySeq) {
+          return
+        }
         const fetched = res.data?.results || res.data || []
-        const mergedMap = new Map()
-        ;(selectedSheetSeed.value || []).forEach(s => mergedMap.set(s.id, s))
-        fetched.forEach(s => mergedMap.set(s.id, s))
-        sheetOptions.value = Array.from(mergedMap.values())
+        const optionMap = new Map()
+        ;(selectedSheetSeed.value || []).forEach(s => optionMap.set(s.id, s))
+        ;(sheetOptions.value || []).forEach(s => optionMap.set(s.id, s))
+        fetched.forEach(s => optionMap.set(s.id, s))
+
+        const selectedIds = Array.isArray(form.sheet_ids) ? form.sheet_ids : []
+        const selectedIdSet = new Set(selectedIds)
+        const selectedOptions = selectedIds.map(id => optionMap.get(id)).filter(Boolean)
+        const unselectedOptions = fetched.filter(s => !selectedIdSet.has(s.id))
+        sheetOptions.value = [...selectedOptions, ...unselectedOptions]
       } finally {
-        loadingSheets.value = false
+        if (requestSeq === sheetQuerySeq) {
+          loadingSheets.value = false
+        }
       }
     }
 
@@ -664,9 +708,16 @@ export default {
 
     onMounted(async () => {
       await loadDetailIfEdit()
-      await queryMembers('')
-      await querySheets('')
+      await Promise.allSettled([queryMembers(''), querySheets('')])
     })
+
+    watch(
+      () => route.params.id,
+      async () => {
+        await loadDetailIfEdit()
+        await Promise.allSettled([queryMembers(''), querySheets('')])
+      }
+    )
 
     watch(
       () => form.visible_to_alumni,
@@ -683,6 +734,7 @@ export default {
 
     return {
       formRef,
+      formReady,
       form,
       rules,
       memberOptions,

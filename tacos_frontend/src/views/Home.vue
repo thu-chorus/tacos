@@ -24,7 +24,8 @@
               border-width: 2px;
             "
           >
-            立即登录
+            <i-lucide-log-in class="btn-icon" />
+            <span>立即登录</span>
           </button>
           <button
             class="btn-modern primary"
@@ -38,7 +39,8 @@
               border-width: 2px;
             "
           >
-            进入系统
+            <i-lucide-house class="btn-icon" />
+            <span>进入系统</span>
           </button>
         </div>
       </div>

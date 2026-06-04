@@ -56,27 +56,27 @@ export function useUrlState(config = {}) {
     }
 
     switch (type) {
-    case 'number': {
-      const num = Number(value)
-      return isNaN(num) ? undefined : num
-    }
-    case 'boolean':
-      return value === 'true' || value === '1'
-    case 'array':
-      if (Array.isArray(value)) {
-        return value
+      case 'number': {
+        const num = Number(value)
+        return isNaN(num) ? undefined : num
       }
-      if (typeof value === 'string') {
-        try {
-          const parsed = JSON.parse(value)
-          return Array.isArray(parsed) ? parsed : [value]
-        } catch {
-          return value ? [value] : []
+      case 'boolean':
+        return value === 'true' || value === '1'
+      case 'array':
+        if (Array.isArray(value)) {
+          return value
         }
-      }
-      return []
-    default:
-      return String(value)
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value)
+            return Array.isArray(parsed) ? parsed : [value]
+          } catch {
+            return value ? [value] : []
+          }
+        }
+        return []
+      default:
+        return String(value)
     }
   }
 

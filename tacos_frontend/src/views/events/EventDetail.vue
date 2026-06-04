@@ -1,6 +1,12 @@
 <template>
   <div class="page-container">
-    <div class="card">
+    <div v-if="!pageLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
+
+    <div v-if="pageLoaded" class="card">
       <div class="card-content">
         <div class="profile-header">
           <div class="meta">
@@ -17,9 +23,13 @@
             </div>
           </div>
           <div class="actions">
-            <button v-if="canEdit" class="btn-modern warning sm-btn" @click="goEdit">编辑</button>
+            <button v-if="canEdit" class="btn-modern warning sm-btn" @click="goEdit">
+              <i-lucide-pencil class="btn-icon" />
+              <span>编辑</span>
+            </button>
             <button v-if="canJoin" class="btn-modern success sm-btn" @click="doJoin">
-              报名参加
+              <i-lucide-check class="btn-icon" />
+              <span>报名参加</span>
             </button>
           </div>
         </div>
@@ -44,7 +54,7 @@
       </div>
     </div>
 
-    <div v-if="isParticipantMember && !canJoin" class="alerts-grid">
+    <div v-if="pageLoaded && isParticipantMember && !canJoin" class="alerts-grid">
       <div
         v-if="checkin.active && !hasCheckedIn"
         class="alert-card"
@@ -53,7 +63,10 @@
         <div class="alert-title">有签到进行中</div>
         <div class="alert-desc">您还未完成当前签到，请尽快签到。</div>
         <div class="alert-actions">
-          <button class="btn-modern warning sm-btn" @click="openCheckinDialog">立即签到</button>
+          <button class="btn-modern warning sm-btn" @click="openCheckinDialog">
+            <i-lucide-clipboard-check class="btn-icon" />
+            <span>立即签到</span>
+          </button>
         </div>
       </div>
       <div
@@ -64,14 +77,18 @@
         <div class="alert-title">有未提交的作业</div>
         <div class="alert-desc">当前共有 {{ pendingAssignmentsCount }} 个进行中的作业未提交。</div>
         <div class="alert-actions">
-          <button class="btn-modern primary sm-btn" @click="openAssignmentList">查看作业</button>
+          <button class="btn-modern primary sm-btn" @click="openAssignmentList">
+            <i-lucide-list-checks class="btn-icon" />
+            <span>查看作业</span>
+          </button>
         </div>
       </div>
     </div>
 
     <div
       v-if="
-        !canJoin &&
+        pageLoaded &&
+        canViewEventContent &&
         (event.announcement || (event.announcement_images && event.announcement_images.length))
       "
       class="alerts-grid"
@@ -105,7 +122,7 @@
       </div>
     </div>
 
-    <div class="section-grid cards-row" v-if="!canJoin">
+    <div class="section-grid cards-row" v-if="pageLoaded && canViewEventContent">
       <div class="card card-clickable flat" @click="openCheckinList">
         <div class="card-content stat-content">
           <div class="stat-icon">
@@ -203,7 +220,8 @@
           </el-form-item>
           <el-form-item>
             <button class="btn-modern ghost sm-btn" @click="fillCurrentLocation">
-              使用当前定位填充
+              <i-lucide-map-pin class="btn-icon" />
+              <span>使用当前定位填充</span>
             </button>
           </el-form-item>
         </template>
@@ -214,9 +232,13 @@
           @click="startDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
-        <button class="btn-modern primary sm-btn" @click="doStartCheckin">创建</button>
+        <button class="btn-modern primary sm-btn" @click="doStartCheckin">
+          <i-lucide-plus class="btn-icon" />
+          <span>创建</span>
+        </button>
       </template>
     </el-dialog>
 
@@ -230,7 +252,10 @@
       </div>
       <div v-else-if="checkin.session?.type === 'LOCATION'" style="margin-bottom: 10px">
         <p>需要授权定位以完成签到</p>
-        <button class="btn-modern primary sm-btn" @click="getLocation">获取当前位置</button>
+        <button class="btn-modern primary sm-btn" @click="getLocation">
+          <i-lucide-map-pin class="btn-icon" />
+          <span>获取当前位置</span>
+        </button>
         <div v-if="submitDialog.lat && submitDialog.lng" style="margin-top: 8px">
           坐标：{{ submitDialog.lat }}, {{ submitDialog.lng }}
         </div>
@@ -244,9 +269,13 @@
           @click="submitDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
-        <button class="btn-modern primary sm-btn" @click="doSubmitCheckin">提交</button>
+        <button class="btn-modern primary sm-btn" @click="doSubmitCheckin">
+          <i-lucide-check class="btn-icon" />
+          <span>提交</span>
+        </button>
       </template>
     </el-dialog>
 
@@ -255,7 +284,10 @@
       <div v-loading="dialogs.checkins.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern primary sm-btn" @click="openStartCheckin">创建签到</button>
+          <button class="btn-modern primary sm-btn" @click="openStartCheckin">
+            <i-lucide-plus class="btn-icon" />
+            <span>创建签到</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -263,7 +295,7 @@
               <tr>
                 <th style="min-width: 100px">签到</th>
                 <th style="min-width: 80px">状态</th>
-                <th style="min-width: 95px">类型</th>
+                <th style="min-width: 130px">类型</th>
                 <th style="min-width: 160px">开始时间</th>
                 <th style="min-width: 160px">结束时间</th>
                 <th class="sticky-right" style="max-width: 175px; min-width: 150px">操作</th>
@@ -295,14 +327,16 @@
                       v-if="canEdit && !row.is_active"
                       @click="doBeginCheckin(row.id)"
                     >
-                      开始
+                      <i-lucide-check class="btn-icon" />
+                      <span>开始</span>
                     </button>
                     <button
                       class="btn-modern danger xsm-btn"
                       v-if="canEdit && row.is_active"
                       @click="doStopCheckin"
                     >
-                      结束
+                      <i-lucide-x class="btn-icon" />
+                      <span>结束</span>
                     </button>
                     <button
                       class="btn-modern primary xsm-btn"
@@ -314,21 +348,23 @@
                       "
                       @click="openCheckinDialog"
                     >
-                      立即签到
+                      <i-lucide-clipboard-check class="btn-icon" />
+                      <span>立即签到</span>
                     </button>
                     <button
                       class="btn-modern warning xsm-btn"
                       v-if="canEdit"
                       @click="goSessionManage(row.id)"
                     >
-                      管理
+                      <i-lucide-settings class="btn-icon" />
+                      <span>管理</span>
                     </button>
                     <button
                       class="btn-modern ghost xsm-btn share-checkin-btn"
                       @click="handleShareCheckin(row)"
                       title="分享此签到"
                     >
-                      <i-lucide-share style="width: 14px; height: 14px" />
+                      <i-lucide-share class="btn-icon" />
                     </button>
                   </div>
                 </td>
@@ -352,7 +388,10 @@
       <div v-loading="dialogs.admins.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -403,7 +442,18 @@
       <div v-loading="dialogs.members.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
+          <button
+            class="btn-modern success sm-btn"
+            @click="handleExportMembers"
+            :disabled="membersExporting"
+          >
+            <i-lucide-download class="btn-icon" />
+            <span>{{ membersExporting ? '导出中...' : '导出队员' }}</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -454,7 +504,10 @@
       <div v-loading="dialogs.assignments.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern primary sm-btn" @click="openCreateAssignment">发布作业</button>
+          <button class="btn-modern primary sm-btn" @click="openCreateAssignment">
+            <i-lucide-plus class="btn-icon" />
+            <span>发布作业</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -508,21 +561,24 @@
                       class="btn-modern primary xsm-btn"
                       @click="goAssignment(row)"
                     >
-                      查看内容
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看内容</span>
                     </button>
                     <button
                       v-if="canEdit"
                       class="btn-modern primary xsm-btn"
                       @click="goAssignment(row)"
                     >
-                      查看
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
                     </button>
                     <button
                       v-if="canEdit"
                       class="btn-modern warning xsm-btn"
                       @click="goAssignmentManage(row)"
                     >
-                      管理
+                      <i-lucide-settings class="btn-icon" />
+                      <span>管理</span>
                     </button>
                   </div>
                 </td>
@@ -546,7 +602,10 @@
       <div v-loading="dialogs.sheets.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -576,8 +635,14 @@
                 </td>
                 <td class="sticky-right">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="goSheet(row)">详情</button>
-                    <button class="btn-modern primary xsm-btn" @click="download(row)">下载</button>
+                    <button class="btn-modern ghost xsm-btn" @click="goSheet(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>详情</span>
+                    </button>
+                    <button class="btn-modern primary xsm-btn" @click="download(row)">
+                      <i-lucide-download class="btn-icon" />
+                      <span>下载</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -630,7 +695,10 @@
             :auto-upload="false"
             multiple
           >
-            <button class="btn-modern ghost sm-btn" type="button">选择文件</button>
+            <button class="btn-modern ghost sm-btn" type="button">
+              <i-lucide-upload class="btn-icon" />
+              <span>选择文件</span>
+            </button>
           </el-upload>
         </el-form-item>
       </el-form>
@@ -640,10 +708,12 @@
           @click="createDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
         <button class="btn-modern primary sm-btn" :loading="creating" @click="doCreateAssignment">
-          发布
+          <i-lucide-send class="btn-icon" />
+          <span>发布</span>
         </button>
       </template>
     </el-dialog>
@@ -654,6 +724,7 @@
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import PageLoading from '@/components/common/PageLoading.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import {
   getEventDetail,
@@ -671,11 +742,13 @@ import {
   uploadAssignmentAttachment,
   getEventSheets,
   getEventAdmins,
-  getEventMembers
+  getEventMembers,
+  exportEventMembers
 } from '@/api/events'
 import { getProfile } from '@/api/auth'
 import { initiateDownload, getDownloadTask } from '@/api/sheets'
 import { formatDate, formatDateTime } from '@/utils/format'
+import { downloadFile, getFilenameFromContentDisposition } from '@/utils/download'
 import { notify } from '@/utils/notify'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -694,6 +767,7 @@ import { doCheckinShare } from '@/utils/share'
 export default {
   name: 'EventDetail',
   components: {
+    PageLoading,
     Pagination,
     'i-lucide-user': LucideUser,
     'i-lucide-list-checks': LucideListChecks,
@@ -710,9 +784,12 @@ export default {
 
     const currentId = computed(() => route.params.id)
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const event = ref({})
     const checkin = ref({ active: false, session: null })
     const pendingAssignmentsCount = ref(0)
+    const membersExporting = ref(false)
+    let detailRequestSeq = 0
     const dialogs = ref({
       checkins: { visible: false, loading: false, items: [] },
       assignments: { visible: false, loading: false, items: [] },
@@ -786,30 +863,54 @@ export default {
       return isAdmin.value || event.value?.relation === 'event_admin' || event.value?.is_participant
     }
 
-    const fetchDetail = async () => {
+    const fetchDetail = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      if (reset) {
+        pageLoaded.value = false
+      }
       loading.value = true
       try {
-        await loadMyMemberContext()
         const curId = route.params.id
-        const res = await getEventDetail(curId)
+        const isLatestRequest = () =>
+          requestSeq === detailRequestSeq && String(curId) === String(route.params.id)
+        const [res] = await Promise.all([getEventDetail(curId), loadMyMemberContext()])
+        if (!isLatestRequest()) {
+          return
+        }
         event.value = res.data
         // 设置分享页面信息
         if (event.value.name) {
           store.dispatch('common/setSharePageInfo', `活动「${event.value.name}」`)
         }
-        const s2 = await getCheckinStatus(curId)
+        const [checkinResult, pendingAssignmentsResult] = await Promise.allSettled([
+          getCheckinStatus(curId),
+          computePendingAssignmentsCount(curId)
+        ])
+        if (!isLatestRequest()) {
+          return
+        }
+        const s2 =
+          checkinResult.status === 'fulfilled'
+            ? checkinResult.value
+            : { data: { active: false, session: null } }
+        const nextPendingAssignmentsCount =
+          pendingAssignmentsResult.status === 'fulfilled' ? pendingAssignmentsResult.value : 0
         checkin.value = s2.data || { active: false, session: null }
-        await refreshMyCheckinFlag(curId)
-        await computePendingAssignmentsCount(curId)
+        const activeSessionId = Number(checkin.value?.session?.id)
+        hasCheckedIn.value = !!s2.data?.has_checked_in
+        checkedSessionIds.value =
+          hasCheckedIn.value && Number.isFinite(activeSessionId) ? [activeSessionId] : []
+        pendingAssignmentsCount.value = nextPendingAssignmentsCount
+        pageLoaded.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
     const refreshMyCheckinFlag = async eventId => {
       try {
-        hasCheckedIn.value = false
-        checkedSessionIds.value = []
         if (!user.value) {
           return
         }
@@ -824,7 +925,7 @@ export default {
         let total = Infinity
 
         while ((page - 1) * pageSize < total) {
-          const res = await getCheckinRecords(eventId, { page, page_size: pageSize })
+          const res = await getCheckinRecords(eventId, { page, page_size: pageSize, mine: true })
           const pageRows = res?.data?.results || []
           total = Number(res?.data?.count || pageRows.length || 0)
           rows.push(...pageRows)
@@ -840,11 +941,19 @@ export default {
 
         const myId = user.value.user_id
         const mine = rows.filter(r => r.member_user_id === myId)
-        checkedSessionIds.value = mine
+        const nextCheckedSessionIds = mine
           .map(r => Number(r.session))
           .filter(sessionId => Number.isFinite(sessionId))
+
+        if (String(eventId) !== String(currentId.value)) {
+          return
+        }
+
+        checkedSessionIds.value = nextCheckedSessionIds
         if (checkin.value.active && checkin.value.session) {
-          hasCheckedIn.value = checkedSessionIds.value.includes(Number(checkin.value.session.id))
+          hasCheckedIn.value = nextCheckedSessionIds.includes(Number(checkin.value.session.id))
+        } else {
+          hasCheckedIn.value = false
         }
       } catch (e) {
         // 签到记录加载失败时保持默认状态
@@ -856,19 +965,18 @@ export default {
     const computePendingAssignmentsCount = async eventId => {
       try {
         if (!event.value?.is_participant) {
-          pendingAssignmentsCount.value = 0
-          return
+          return 0
         }
         const ares = await getAssignments(eventId, { page_size: 200 })
         const rows = ares?.data?.results || []
         const now = dayjs().tz('Asia/Shanghai')
-        pendingAssignmentsCount.value = rows.filter(r => {
+        return rows.filter(r => {
           const deadline = dayjs(r.deadline).tz('Asia/Shanghai')
           const ongoing = !r.is_closed && deadline.valueOf() > now.valueOf()
           return ongoing && !r.my_submitted
         }).length
       } catch {
-        pendingAssignmentsCount.value = 0
+        return 0
       }
     }
 
@@ -876,7 +984,10 @@ export default {
       dialogs.value.checkins.visible = true
       dialogs.value.checkins.loading = true
       try {
-        const listRes = await getCheckinSessions(currentId.value)
+        const [listRes] = await Promise.all([
+          getCheckinSessions(currentId.value),
+          refreshMyCheckinFlag(currentId.value)
+        ])
         const payload = listRes && listRes.data ? listRes.data : listRes
         const sessions = (payload && (payload.results ?? payload)) || []
         dialogs.value.checkins.items = Array.isArray(sessions) ? sessions : sessions.results || []
@@ -964,6 +1075,25 @@ export default {
       }
     }
 
+    const handleExportMembers = async () => {
+      membersExporting.value = true
+      notify.info('正在导出活动队员，请稍候...')
+      try {
+        const resp = await exportEventMembers(currentId.value)
+        let filename = getFilenameFromContentDisposition(resp.headers?.['content-disposition'])
+        if (!filename || filename === 'download') {
+          filename = `活动队员_${event.value?.name || currentId.value}.xlsx`
+        }
+        downloadFile(resp.data, filename)
+        notify.success('导出成功')
+      } catch (error) {
+        notify.error('导出失败')
+        console.error('导出活动队员失败', error)
+      } finally {
+        membersExporting.value = false
+      }
+    }
+
     const adminsPage = computed(() => {
       const pg = paginations.value.admins
       const data = dialogs.value.admins.items || []
@@ -1047,6 +1177,9 @@ export default {
     }
 
     const canEdit = computed(() => isAdmin.value || event.value?.relation === 'event_admin')
+    const canViewEventContent = computed(() => {
+      return canEdit.value || event.value?.is_participant === true
+    })
     const canJoin = computed(() => {
       if (!user.value || event.value?.is_participant) {
         return false
@@ -1432,11 +1565,11 @@ export default {
       window.removeEventListener('resize', computeDialogWidths)
     })
 
-    onMounted(fetchDetail)
+    onMounted(() => fetchDetail({ reset: true }))
     watch(
       () => route.params.id,
       () => {
-        fetchDetail()
+        fetchDetail({ reset: true })
       }
     )
     const getVoicePartType = voicePart => {
@@ -1470,6 +1603,7 @@ export default {
     return {
       id: currentId,
       loading,
+      pageLoaded,
       event,
       checkin,
       pendingAssignmentsCount,
@@ -1488,9 +1622,11 @@ export default {
       handlePageSize,
       handleCurrentPage,
       isAdmin,
+      membersExporting,
       formatDate,
       formatDateTime,
       canEdit,
+      canViewEventContent,
       canJoin,
       isParticipantMember,
       canSubmitCheckin,
@@ -1504,6 +1640,7 @@ export default {
       openSheetList,
       openAdminList,
       openMemberList,
+      handleExportMembers,
       openStartCheckin,
       doStartCheckin,
       doStopCheckin,
@@ -1711,23 +1848,30 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
 .data-table thead th.sticky-right {
   position: sticky;
@@ -1743,6 +1887,9 @@ export default {
   background: #fff;
   border-left: 1px solid var(--border);
 }
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
+}
 .empty-cell {
   text-align: center;
   color: #9ca3af;
@@ -1750,6 +1897,8 @@ export default {
 }
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 .share-checkin-btn {

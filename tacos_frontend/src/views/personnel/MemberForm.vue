@@ -10,17 +10,14 @@
               type="button"
               @click="showBulkDialog = true"
             >
-              批量新增
+              <i-lucide-user-plus class="btn-icon" />
+              <span>批量新增</span>
             </button>
           </div>
         </div>
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-width="100px"
-          v-loading="loading"
-        >
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else ref="formRef" :model="formData" :rules="formRules" label-width="100px">
           <el-row :gutter="24">
             <el-col :xs="24" :sm="12">
               <el-form-item label="学号" prop="user_id">
@@ -324,9 +321,14 @@
               @click="handleSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '更新' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-user-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '更新' : '创建' }}</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>
@@ -371,7 +373,8 @@
           @click="handleDownloadTemplate"
           :disabled="downloadingTemplate"
         >
-          {{ downloadingTemplate ? '下载中...' : '下载模板' }}
+          <i-lucide-download class="btn-icon" />
+          <span>{{ downloadingTemplate ? '下载中...' : '下载模板' }}</span>
         </button>
       </div>
       <div style="padding: 0 28px 8px 28px; display: flex; align-items: center; gap: 12px">
@@ -401,13 +404,17 @@
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 8px">
-        <button class="btn-modern ghost sm-btn" @click="showBulkDialog = false">关闭</button>
+        <button class="btn-modern ghost sm-btn" @click="showBulkDialog = false">
+          <i-lucide-x class="btn-icon" />
+          <span>关闭</span>
+        </button>
         <button
           class="btn-modern primary sm-btn"
           :disabled="!selectedFile || importing"
           @click="handleBulkImport"
         >
-          {{ importing ? '导入中...' : '开始导入' }}
+          <i-lucide-upload class="btn-icon" />
+          <span>{{ importing ? '导入中...' : '开始导入' }}</span>
         </button>
       </div>
 
@@ -454,7 +461,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import {
@@ -474,11 +481,12 @@ import {
   downloadMemberImportTemplate,
   bulkImportMembers
 } from '@/api/personnel'
+import PageLoading from '@/components/common/PageLoading.vue'
 import { downloadFile, getFilenameFromContentDisposition } from '@/utils/download'
 
 export default {
   name: 'MemberForm',
-  components: {},
+  components: { PageLoading },
   setup() {
     const route = useRoute()
     const router = useRouter()
@@ -495,9 +503,11 @@ export default {
     const importResult = reactive({ total: 0, success: 0, failed: 0, rows: [] })
 
     const isEdit = computed(() => !!route.params.id)
+    const formReady = ref(!isEdit.value)
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const currentUser = computed(() => store.getters['auth/user'])
     const isSelf = ref(false)
+    let detailRequestSeq = 0
 
     const formData = reactive({
       user_id: '',
@@ -660,9 +670,20 @@ export default {
     }
 
     const loadForEdit = async () => {
+      const requestSeq = ++detailRequestSeq
+      const memberId = route.params.id
+      if (!isEdit.value) {
+        formReady.value = true
+        return
+      }
+      formReady.value = false
+      isSelf.value = false
       loading.value = true
       try {
-        const res = await getMemberDetail(route.params.id)
+        const res = await getMemberDetail(memberId)
+        if (requestSeq !== detailRequestSeq || String(memberId) !== String(route.params.id)) {
+          return
+        }
         const data = res.data || {}
 
         if (currentUser.value && data.user_id === currentUser.value.user_id) {
@@ -712,8 +733,11 @@ export default {
           portfolio: data.portfolio || ''
         })
         updateHometown()
+        formReady.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -827,9 +851,19 @@ export default {
       }
     })
 
+    watch(
+      () => route.params.id,
+      () => {
+        if (isEdit.value) {
+          loadForEdit()
+        }
+      }
+    )
+
     return {
       formRef,
       loading,
+      formReady,
       submitting,
       isEdit,
       isSelf,

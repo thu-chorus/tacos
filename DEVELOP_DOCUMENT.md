@@ -1,7 +1,7 @@
 # TaCOS 开发者文档
 
-**版本**: v2.2.0
-**最后更新**: 2026-05-28
+**版本**: v2.3.0
+**最后更新**: 2026-06-04
 
 ## 目录
 
@@ -112,6 +112,8 @@
 | Vant | 4.6+ | 移动端 UI 组件 |
 | NutUI | 4.0+ | 移动端 UI 组件 |
 | Day.js | 1.11+ | 日期时间处理 |
+
+前端 API 层对高频读取接口使用内存 TTL 缓存和并发请求合并：个人档案缓存 5 分钟，详情接口缓存 2 分钟，列表接口缓存 30 秒。登录、登出、401 退出和相关写操作会清理或失效对应缓存，避免跨账号或编辑后的旧数据残留。
 
 ### 2.3 后端技术
 
@@ -693,6 +695,7 @@ override: true  # 可选，覆盖已有信息
 | PUT | `/{public_id}/` | 更新活动 | Admin |
 | DELETE | `/{public_id}/` | 删除活动 | Admin |
 | POST | `/{public_id}/join/` | 报名活动 | Auth |
+| GET | `/{public_id}/members/export/` | 导出活动参与队员名单（.xlsx） | Admin/EventAdmin |
 
 **GET 返回字段（列表/详情）仅包含基础信息与关系标识：**
 - `id, name, introduction, announcement, start_date, end_date, visibility, visible_to_alumni, created_at, updated_at`
@@ -706,6 +709,7 @@ override: true  # 可选，覆盖已有信息
 说明：作业、关联乐谱与签到等详细数据不再嵌入活动详情，请通过以下专属端点获取：
 - 作业：`/api/v1/events/{public_id}/assignments/` 及其子端点
 - 乐谱：`/api/v1/events/{public_id}/sheets`
+- 队员：`/api/v1/events/{public_id}/members/`，导出使用 `/api/v1/events/{public_id}/members/export/`
 - 签到：`/api/v1/events/{public_id}/checkin/...`
 
 **公告图片**:
@@ -1468,6 +1472,14 @@ git push origin main --tags
 ```
 
 ## 十、更新日志
+
+### v2.3.0 (2026-06-04)
+
+- 优化前端加载状态、缓存复用和并发请求，减少首屏闪烁和重复加载。
+- 增加活动队员导出能力，活动管理员无需加入活动也可管理活动。
+- 增加成员列表头像轻量预览，并优化成员列表展示密度。
+- 优化活动乐谱下拉选择排序，已选乐谱置顶。
+- 统一乐谱上传表单操作，将重置调整为取消返回。
 
 ### v2.2.0 (2026-05-28)
 
@@ -2446,6 +2458,6 @@ volumes:
   postgres_data:
 ```
 
-**文档最后更新**: 2026-05-28
-**文档版本**: v2.2.0
+**文档最后更新**: 2026-06-04
+**文档版本**: v2.3.0
 **维护者**: TaCOS开发团队

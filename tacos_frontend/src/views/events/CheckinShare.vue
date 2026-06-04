@@ -53,7 +53,8 @@
             <div v-else-if="sessionType === 'LOCATION'" class="form-item">
               <p class="location-hint">需要授权定位以完成签到</p>
               <button class="btn-modern primary" @click="getLocation" :disabled="gettingLocation">
-                {{ gettingLocation ? '获取中...' : '获取当前位置' }}
+                <i-lucide-map-pin class="btn-icon" />
+                <span>{{ gettingLocation ? '获取中...' : '获取当前位置' }}</span>
               </button>
               <div v-if="lat && lng" class="location-display">坐标：{{ lat }}, {{ lng }}</div>
             </div>
@@ -65,13 +66,17 @@
         </div>
 
         <div class="checkin-footer">
-          <button class="btn-modern ghost" @click="goToEvent">返回活动</button>
+          <button class="btn-modern ghost" @click="goToEvent">
+            <i-lucide-arrow-left class="btn-icon" />
+            <span>返回活动</span>
+          </button>
           <button
             class="btn-modern primary"
             @click="handleSubmit"
             :disabled="submitting || (sessionType === 'LOCATION' && !lat)"
           >
-            {{ submitting ? '提交中...' : '提交签到' }}
+            <i-lucide-clipboard-check class="btn-icon" />
+            <span>{{ submitting ? '提交中...' : '提交签到' }}</span>
           </button>
         </div>
       </div>

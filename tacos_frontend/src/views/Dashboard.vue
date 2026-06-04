@@ -7,112 +7,120 @@
       </div>
     </div>
 
-    <div class="section-grid">
-      <div class="card announcements-card">
-        <div class="card-content">
-          <div class="card-header announcements-header">
-            <h2>公告广播</h2>
-          </div>
-          <button
-            class="btn-modern ghost sm-btn ann-manage-btn"
-            v-if="isAdmin"
-            @click="navigateTo('/announcements')"
-          >
-            <i-lucide-settings class="mr" />
-            <div class="ann-manage-btn-text" style="font-weight: bold">管理公告</div>
-          </button>
-          <div class="divider" />
-          <div class="announcements">
-            <div v-if="announcements.length === 0" class="announcement-item">
-              <div class="announcement-content">暂无公告</div>
+    <div v-if="!dashboardLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
+
+    <template v-else>
+      <div class="section-grid">
+        <div class="card announcements-card">
+          <div class="card-content">
+            <div class="card-header announcements-header">
+              <h2>公告广播</h2>
             </div>
-            <div v-for="item in announcements" :key="item.id" class="announcement-item">
-              <div class="announcement-date">{{ formatDateTime(item.publish_time) }}</div>
-              <div class="announcement-content">
-                <strong v-if="item.title" class="announcement-title">{{ item.title }}</strong>
+            <button
+              class="btn-modern ghost sm-btn ann-manage-btn"
+              v-if="isAdmin"
+              @click="navigateTo('/announcements')"
+            >
+              <i-lucide-settings class="btn-icon" />
+              <div class="ann-manage-btn-text" style="font-weight: bold">管理公告</div>
+            </button>
+            <div class="divider" />
+            <div class="announcements">
+              <div v-if="announcements.length === 0" class="announcement-item">
+                <div class="announcement-content">暂无公告</div>
               </div>
-              <div class="announcement-content">{{ item.content }}</div>
+              <div v-for="item in announcements" :key="item.id" class="announcement-item">
+                <div class="announcement-date">{{ formatDateTime(item.publish_time) }}</div>
+                <div class="announcement-content">
+                  <strong v-if="item.title" class="announcement-title">{{ item.title }}</strong>
+                </div>
+                <div class="announcement-content">{{ item.content }}</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="section-grid">
-      <div class="card card-clickable flat" @click="navigateTo('/personnel/members')">
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-user />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">{{ stats.totalMembers }}</div>
-            <div class="stat-label" style="font-size: 14px; font-weight: bold">总队员数</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card card-clickable flat" @click="navigateTo('/sheets')">
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-file-text />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">{{ stats.totalSheets }}</div>
-            <div class="stat-label" style="font-size: 14px; font-weight: bold">我的乐谱</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card card-clickable flat" @click="navigateTo('/events')">
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-calendar />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">
-              {{ stats.totalMyEvents }}
-              <span style="font-size: 0.7em">/ {{ stats.totalEvents }}</span>
+      <div class="section-grid">
+        <div class="card card-clickable flat" @click="navigateTo('/personnel/members')">
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-user />
             </div>
-            <div class="stat-label" style="font-size: 14px; font-weight: bold">参与活动</div>
+            <div class="stat-info">
+              <div class="stat-number">{{ stats.totalMembers }}</div>
+              <div class="stat-label" style="font-size: 14px; font-weight: bold">总队员数</div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="section-grid">
-      <div class="card" v-if="isAdmin">
-        <div class="card-content">
-          <div class="card-header">
-            <h3>管理员选项</h3>
+        <div class="card card-clickable flat" @click="navigateTo('/sheets')">
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-file-text />
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">{{ stats.totalSheets }}</div>
+              <div class="stat-label" style="font-size: 14px; font-weight: bold">我的乐谱</div>
+            </div>
           </div>
-          <div class="divider" />
-          <div class="admin-actions">
-            <button
-              class="btn-modern ghost big-btn"
-              @click="navigateTo('/personnel/instructors')"
-              style="margin-right: 12px"
-            >
-              <i-lucide-graduation-cap class="btn-icon" />
-              <span>查看教师列表</span>
-            </button>
-            <button
-              class="btn-modern ghost big-btn"
-              @click="navigateTo('/titles')"
-              style="margin-right: 12px"
-            >
-              <i-lucide-badge-check class="btn-icon" />
-              <span>称号管理</span>
-            </button>
+        </div>
+
+        <div class="card card-clickable flat" @click="navigateTo('/events')">
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-calendar />
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">
+                {{ stats.totalMyEvents }}
+                <span style="font-size: 0.7em">/ {{ stats.totalEvents }}</span>
+              </div>
+              <div class="stat-label" style="font-size: 14px; font-weight: bold">参与活动</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <SiteFooter />
+
+      <div class="section-grid">
+        <div class="card" v-if="isAdmin">
+          <div class="card-content">
+            <div class="card-header">
+              <h3>管理员选项</h3>
+            </div>
+            <div class="divider" />
+            <div class="admin-actions">
+              <button
+                class="btn-modern ghost big-btn"
+                @click="navigateTo('/personnel/instructors')"
+                style="margin-right: 12px"
+              >
+                <i-lucide-graduation-cap class="btn-icon" />
+                <span>查看教师列表</span>
+              </button>
+              <button
+                class="btn-modern ghost big-btn"
+                @click="navigateTo('/titles')"
+                style="margin-right: 12px"
+              >
+                <i-lucide-badge-check class="btn-icon" />
+                <span>称号管理</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <SiteFooter />
+    </template>
   </div>
 </template>
 
 <script>
-import { computed, reactive, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { getMemberStats } from '@/api/personnel'
@@ -120,6 +128,7 @@ import { getAnnouncements } from '@/api/common'
 import { formatDateTime } from '@/utils/format'
 import { getSheetList } from '@/api/sheets'
 import { getEventList } from '@/api/events'
+import PageLoading from '@/components/common/PageLoading.vue'
 import SiteFooter from '@/components/common/SiteFooter.vue'
 import {
   User as LucideUser,
@@ -139,6 +148,7 @@ export default {
     'i-lucide-settings': LucideSettings,
     'i-lucide-graduation-cap': LucideGraduationCap,
     'i-lucide-badge-check': LucideBadgeCheck,
+    PageLoading,
     SiteFooter
   },
   setup() {
@@ -152,6 +162,7 @@ export default {
       totalEvents: 0
     })
     const announcements = reactive([])
+    const dashboardLoaded = ref(false)
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const isSuperAdmin = computed(() => store.getters['auth/isSuperAdmin'])
@@ -165,19 +176,19 @@ export default {
 
     const myUserId = computed(() => store.getters['auth/user']?.user_id || '')
 
-    const fetchMyEventsCount = async () => {
+    const fetchEventStats = async () => {
       if (!myUserId.value) {
-        return 0
+        return { totalEvents: 0, totalMyEvents: 0 }
       }
       let page = 1
       const pageSize = 200
       let total = Infinity
-      let count = 0
+      let myCount = 0
       while ((page - 1) * pageSize < total) {
         const res = await getEventList({ page, page_size: pageSize })
         const results = Array.isArray(res.data?.results) ? res.data.results : []
         total = Number(res.data?.count || 0)
-        count += results.filter(
+        myCount += results.filter(
           ev => ev?.relation === 'member' || ev?.relation === 'event_admin'
         ).length
         if (results.length < pageSize) {
@@ -188,54 +199,41 @@ export default {
           break
         }
       }
-      return count
-    }
-
-    const fetchAllEventsCount = async () => {
-      const uid = myUserId.value
-      if (!uid) {
-        return 0
-      }
-      let page = 1
-      const pageSize = 200
-      let total = Infinity
-      let count = 0
-      while ((page - 1) * pageSize < total) {
-        const res = await getEventList({ page, page_size: pageSize })
-        const results = Array.isArray(res.data?.results) ? res.data.results : []
-        total = Number(res.data?.count || 0)
-        count += results.length
-        if (results.length < pageSize) {
-          break
-        }
-        page += 1
-        if (page > 50) {
-          break
-        }
-      }
-      return count
+      return { totalEvents: Number.isFinite(total) ? total : 0, totalMyEvents: myCount }
     }
 
     const loadDashboardData = async () => {
+      dashboardLoaded.value = false
       try {
-        // 成员总数（只取 count，减少数据量）
-        const membersRes = await getMemberStats()
-        stats.totalMembers = membersRes.data?.total_members ?? 'NaN'
+        // 独立统计并发加载，避免首页等待多轮请求串行完成
+        const results = await Promise.allSettled([
+          getMemberStats(),
+          getSheetList({ page_size: 1 }),
+          fetchEventStats(),
+          getAnnouncements({ page_size: 5 })
+        ])
 
-        // 我的乐谱总数
-        const sheetsRes = await getSheetList({ page_size: 1 })
-        stats.totalSheets = sheetsRes.data?.count ?? 'NaN'
+        const [membersResult, sheetsResult, eventsResult, announcementsResult] = results
+        if (membersResult.status === 'fulfilled') {
+          stats.totalMembers = membersResult.value.data?.total_members ?? 'NaN'
+        }
+        if (sheetsResult.status === 'fulfilled') {
+          stats.totalSheets = sheetsResult.value.data?.count ?? 'NaN'
+        }
+        if (eventsResult.status === 'fulfilled') {
+          stats.totalMyEvents = eventsResult.value.totalMyEvents
+          stats.totalEvents = eventsResult.value.totalEvents
+        }
+        if (announcementsResult.status === 'fulfilled') {
+          const items = announcementsResult.value.data?.results || []
+          announcements.splice(0, announcements.length, ...items)
+        }
 
-        // 我的活动总数（统计我参与或我为管理员的活动）
-        stats.totalMyEvents = await fetchMyEventsCount()
-        stats.totalEvents = await fetchAllEventsCount()
-
-        // 公告（公开读取，无需鉴权）
-        const annRes = await getAnnouncements({ page_size: 5 })
-        const items = annRes.data?.results || []
-        announcements.splice(0, announcements.length, ...items)
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error)
+        results
+          .filter(result => result.status === 'rejected')
+          .forEach(result => console.error('Failed to load dashboard data:', result.reason))
+      } finally {
+        dashboardLoaded.value = true
       }
     }
 
@@ -259,6 +257,7 @@ export default {
     return {
       stats,
       announcements,
+      dashboardLoaded,
       isAdmin,
       isSuperAdmin,
       navigateTo,

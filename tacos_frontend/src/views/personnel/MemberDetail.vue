@@ -1,222 +1,233 @@
 <template>
   <div class="page-container">
-    <div class="card">
+    <div v-if="!pageLoaded" class="card">
       <div class="card-content">
-        <div class="header" style="margin-bottom: 5px"></div>
+        <PageLoading />
+      </div>
+    </div>
 
-        <div class="profile-header">
-          <div class="avatar" :class="{ 'avatar-clickable': memberInfo.avatar }">
-            <el-image
-              v-if="memberInfo.avatar"
-              class="avatar-image"
-              :src="memberInfo.avatar"
-              :preview-src-list="[memberInfo.avatar]"
-              :initial-index="0"
-              fit="cover"
-              preview-teleported
-              alt="头像"
-            >
-              <template #error>
-                <span>{{ initials }}</span>
-              </template>
-            </el-image>
-            <span v-else>{{ initials }}</span>
-          </div>
-          <div class="meta">
-            <div class="name">{{ memberInfo.name || '未命名' }}</div>
-            <div class="tags">
-              <el-tag v-if="isAdmin" type="info">{{ memberInfo.user_id }}</el-tag>
-              <el-tag :type="getVoicePartType(memberInfo.voice_part)">{{
-                memberInfo.voice_part
-              }}</el-tag>
-              <el-tag :type="memberInfo.tier === '一队' ? 'danger' : 'primary'">{{
-                memberInfo.tier
-              }}</el-tag>
+    <template v-else>
+      <div class="card">
+        <div class="card-content">
+          <div class="header" style="margin-bottom: 5px"></div>
+
+          <div class="profile-header">
+            <div class="avatar" :class="{ 'avatar-clickable': memberInfo.avatar }">
+              <el-image
+                v-if="memberInfo.avatar"
+                class="avatar-image"
+                :src="memberInfo.avatar"
+                :preview-src-list="[memberInfo.avatar]"
+                :initial-index="0"
+                fit="cover"
+                preview-teleported
+                alt="头像"
+              >
+                <template #error>
+                  <span>{{ initials }}</span>
+                </template>
+              </el-image>
+              <span v-else>{{ initials }}</span>
             </div>
-            <div class="signature-box">
-              <div class="signature-title">个性签名</div>
-              <div class="signature-content">
-                {{ memberInfo.portfolio || '这个人很低调，还没有填写签名。' }}
+            <div class="meta">
+              <div class="name">{{ memberInfo.name || '未命名' }}</div>
+              <div class="tags">
+                <el-tag v-if="isAdmin" type="info">{{ memberInfo.user_id }}</el-tag>
+                <el-tag :type="getVoicePartType(memberInfo.voice_part)">{{
+                  memberInfo.voice_part
+                }}</el-tag>
+                <el-tag :type="memberInfo.tier === '一队' ? 'danger' : 'primary'">{{
+                  memberInfo.tier
+                }}</el-tag>
               </div>
+              <div class="signature-box">
+                <div class="signature-title">个性签名</div>
+                <div class="signature-content">
+                  {{ memberInfo.portfolio || '这个人很低调，还没有填写签名。' }}
+                </div>
+              </div>
+              <div
+                v-if="Array.isArray(memberInfo.titles) && memberInfo.titles.length"
+                class="titles-block"
+              >
+                <div class="titles-title">获得称号</div>
+                <div class="titles">
+                  <TitleBadge
+                    v-for="t in memberInfo.titles"
+                    :key="t.id + '-' + t.awarded_at"
+                    :title="t"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 20px">
+            <h3>队员信息</h3>
+            <div class="actions">
+              <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="handleEdit">
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑</span>
+              </button>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div v-if="memberInfo.wechat_id" class="info-item">
+              <div class="label">微信号</div>
+              <div class="value">{{ memberInfo.wechat_id }}</div>
+            </div>
+            <div v-if="memberInfo.gender" class="info-item">
+              <div class="label">性别</div>
+              <div class="value">{{ memberInfo.gender }}</div>
+            </div>
+            <div v-if="memberInfo.department || memberInfo.department_other" class="info-item">
+              <div class="label">院系</div>
+              <div class="value">
+                <span v-if="memberInfo.department === '其他'">{{
+                  memberInfo.department_other || '其他'
+                }}</span>
+                <span v-else>{{ memberInfo.department }}</span>
+              </div>
+            </div>
+            <div v-if="memberInfo.class_name" class="info-item">
+              <div class="label">班级</div>
+              <div class="value">{{ memberInfo.class_name }}</div>
+            </div>
+            <div v-if="memberInfo.join_month" class="info-item">
+              <div class="label">入队年月</div>
+              <div class="value">{{ memberInfo.join_month }}</div>
+            </div>
+            <div v-if="memberInfo.graduate_month" class="info-item">
+              <div class="label">预计毕业时间</div>
+              <div class="value">{{ memberInfo.graduate_month }}</div>
+            </div>
+            <div v-if="memberInfo.phone_number" class="info-item">
+              <div class="label">手机号</div>
+              <div class="value">{{ memberInfo.phone_number }}</div>
+            </div>
+            <div v-if="memberInfo.email" class="info-item">
+              <div class="label">邮箱</div>
+              <div class="value">{{ memberInfo.email }}</div>
+            </div>
+            <div v-if="memberInfo.dorm" class="info-item">
+              <div class="label">宿舍</div>
+              <div class="value">{{ memberInfo.dorm }}</div>
+            </div>
+            <div v-if="memberInfo.birthday" class="info-item">
+              <div class="label">生日</div>
+              <div class="value">{{ formatBirthday(memberInfo.birthday) }}</div>
+            </div>
+            <div v-if="memberInfo.hometown" class="info-item">
+              <div class="label">籍贯</div>
+              <div class="value">{{ memberInfo.hometown }}</div>
+            </div>
+            <div v-if="memberInfo.ethnicity" class="info-item">
+              <div class="label">民族</div>
+              <div class="value">{{ memberInfo.ethnicity }}</div>
+            </div>
+            <div v-if="memberInfo.political_status" class="info-item">
+              <div class="label">政治面貌</div>
+              <div class="value">{{ memberInfo.political_status }}</div>
+            </div>
+            <div v-if="memberInfo.political_affiliation" class="info-item">
+              <div class="label">党团关系所在</div>
+              <div class="value">{{ memberInfo.political_affiliation }}</div>
+            </div>
+            <div v-if="memberInfo.position" class="info-item">
+              <div class="label">职务</div>
+              <div class="value">{{ memberInfo.position }}</div>
             </div>
             <div
-              v-if="Array.isArray(memberInfo.titles) && memberInfo.titles.length"
-              class="titles-block"
+              v-if="memberInfo.is_specialty === true || memberInfo.is_specialty === false"
+              class="info-item"
             >
-              <div class="titles-title">获得称号</div>
-              <div class="titles">
-                <TitleBadge
-                  v-for="t in memberInfo.titles"
-                  :key="t.id + '-' + t.awarded_at"
-                  :title="t"
-                />
-              </div>
+              <div class="label">特长生</div>
+              <div class="value">{{ memberInfo.is_specialty ? '是' : '否' }}</div>
+            </div>
+            <div
+              v-if="memberInfo.is_centralized === true || memberInfo.is_centralized === false"
+              class="info-item"
+            >
+              <div class="label">集中班</div>
+              <div class="value">{{ memberInfo.is_centralized ? '是' : '否' }}</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 20px">
-          <h3>队员信息</h3>
-          <div class="actions">
-            <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="handleEdit">
-              编辑
-            </button>
-          </div>
-        </div>
-        <div class="info-grid">
-          <div v-if="memberInfo.wechat_id" class="info-item">
-            <div class="label">微信号</div>
-            <div class="value">{{ memberInfo.wechat_id }}</div>
-          </div>
-          <div v-if="memberInfo.gender" class="info-item">
-            <div class="label">性别</div>
-            <div class="value">{{ memberInfo.gender }}</div>
-          </div>
-          <div v-if="memberInfo.department || memberInfo.department_other" class="info-item">
-            <div class="label">院系</div>
-            <div class="value">
-              <span v-if="memberInfo.department === '其他'">{{
-                memberInfo.department_other || '其他'
-              }}</span>
-              <span v-else>{{ memberInfo.department }}</span>
+      <div v-if="alumniProfile" class="card alumni-window-card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header alumni-window-header">
+            <div class="alumni-window-title">
+              <h3>校友窗口</h3>
+              <el-tag v-if="alumniProfile.allow_contact === false" type="info" size="small">
+                暂不开放联系
+              </el-tag>
             </div>
           </div>
-          <div v-if="memberInfo.class_name" class="info-item">
-            <div class="label">班级</div>
-            <div class="value">{{ memberInfo.class_name }}</div>
+          <div class="alumni-window-summary">
+            <div class="alumni-summary-item primary">
+              <div class="summary-label">毕业时间</div>
+              <div class="summary-value">{{ alumniProfile.graduation_month }}</div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">当前城市</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniProfile.current_city) }}</div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">行业</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniProfile.industry) }}</div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">单位 / 职位</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
+            </div>
           </div>
-          <div v-if="memberInfo.join_month" class="info-item">
-            <div class="label">入队年月</div>
-            <div class="value">{{ memberInfo.join_month }}</div>
+          <div v-if="alumniProfile.bio" class="signature-box">
+            <div class="signature-title">个人简介</div>
+            <div class="signature-content">{{ alumniProfile.bio }}</div>
           </div>
-          <div v-if="memberInfo.graduate_month" class="info-item">
-            <div class="label">预计毕业时间</div>
-            <div class="value">{{ memberInfo.graduate_month }}</div>
-          </div>
-          <div v-if="memberInfo.phone_number" class="info-item">
-            <div class="label">手机号</div>
-            <div class="value">{{ memberInfo.phone_number }}</div>
-          </div>
-          <div v-if="memberInfo.email" class="info-item">
-            <div class="label">邮箱</div>
-            <div class="value">{{ memberInfo.email }}</div>
-          </div>
-          <div v-if="memberInfo.dorm" class="info-item">
-            <div class="label">宿舍</div>
-            <div class="value">{{ memberInfo.dorm }}</div>
-          </div>
-          <div v-if="memberInfo.birthday" class="info-item">
-            <div class="label">生日</div>
-            <div class="value">{{ formatBirthday(memberInfo.birthday) }}</div>
-          </div>
-          <div v-if="memberInfo.hometown" class="info-item">
-            <div class="label">籍贯</div>
-            <div class="value">{{ memberInfo.hometown }}</div>
-          </div>
-          <div v-if="memberInfo.ethnicity" class="info-item">
-            <div class="label">民族</div>
-            <div class="value">{{ memberInfo.ethnicity }}</div>
-          </div>
-          <div v-if="memberInfo.political_status" class="info-item">
-            <div class="label">政治面貌</div>
-            <div class="value">{{ memberInfo.political_status }}</div>
-          </div>
-          <div v-if="memberInfo.political_affiliation" class="info-item">
-            <div class="label">党团关系所在</div>
-            <div class="value">{{ memberInfo.political_affiliation }}</div>
-          </div>
-          <div v-if="memberInfo.position" class="info-item">
-            <div class="label">职务</div>
-            <div class="value">{{ memberInfo.position }}</div>
-          </div>
-          <div
-            v-if="memberInfo.is_specialty === true || memberInfo.is_specialty === false"
-            class="info-item"
-          >
-            <div class="label">特长生</div>
-            <div class="value">{{ memberInfo.is_specialty ? '是' : '否' }}</div>
-          </div>
-          <div
-            v-if="memberInfo.is_centralized === true || memberInfo.is_centralized === false"
-            class="info-item"
-          >
-            <div class="label">集中班</div>
-            <div class="value">{{ memberInfo.is_centralized ? '是' : '否' }}</div>
+          <div v-if="alumniProfile.contact_note" class="signature-box">
+            <div class="signature-title">联系备注</div>
+            <div class="signature-content">{{ alumniProfile.contact_note }}</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-if="alumniProfile" class="card alumni-window-card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header alumni-window-header">
-          <div class="alumni-window-title">
-            <h3>校友窗口</h3>
-            <el-tag v-if="alumniProfile.allow_contact === false" type="info" size="small">
-              暂不开放联系
-            </el-tag>
+      <div v-if="isAdmin && hiddenFields.length > 0" class="card">
+        <div class="card-content">
+          <div class="header" style="margin-bottom: 8px">
+            <h3>被隐藏的个人信息</h3>
+            <el-tag type="warning" size="small">该队员已隐藏以下信息</el-tag>
           </div>
-        </div>
-        <div class="alumni-window-summary">
-          <div class="alumni-summary-item primary">
-            <div class="summary-label">毕业时间</div>
-            <div class="summary-value">{{ alumniProfile.graduation_month }}</div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">当前城市</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniProfile.current_city) }}</div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">行业</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniProfile.industry) }}</div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">单位 / 职位</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
-          </div>
-        </div>
-        <div v-if="alumniProfile.bio" class="signature-box">
-          <div class="signature-title">个人简介</div>
-          <div class="signature-content">{{ alumniProfile.bio }}</div>
-        </div>
-        <div v-if="alumniProfile.contact_note" class="signature-box">
-          <div class="signature-title">联系备注</div>
-          <div class="signature-content">{{ alumniProfile.contact_note }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="isAdmin && hiddenFields.length > 0" class="card">
-      <div class="card-content">
-        <div class="header" style="margin-bottom: 8px">
-          <h3>被隐藏的个人信息</h3>
-          <el-tag type="warning" size="small">该队员已隐藏以下信息</el-tag>
-        </div>
-        <div class="hidden-info-grid">
-          <div v-for="field in hiddenFields" :key="field" class="hidden-field-item">
-            <div class="field-label">{{ getFieldDisplayName(field) }}</div>
-            <div class="field-value">{{ getFieldValue(field) || '未填写' }}</div>
+          <div class="hidden-info-grid">
+            <div v-for="field in hiddenFields" :key="field" class="hidden-field-item">
+              <div class="field-label">{{ getFieldDisplayName(field) }}</div>
+              <div class="field-value">{{ getFieldValue(field) || '未填写' }}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import { getMemberDetail } from '@/api/personnel'
+import PageLoading from '@/components/common/PageLoading.vue'
 import TitleBadge from '@/components/common/TitleBadge.vue'
 
 export default {
   name: 'MemberDetail',
   components: {
+    PageLoading,
     TitleBadge
   },
   setup() {
@@ -225,7 +236,9 @@ export default {
     const store = useStore()
 
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const memberInfo = ref({})
+    let detailRequestSeq = 0
     const initials = computed(() => {
       const name = memberInfo.value?.name || ''
       return name ? name.substring(0, 1) : 'T'
@@ -324,30 +337,49 @@ export default {
       router.push(`/personnel/members/${route.params.id}/edit?ref=${encodeURIComponent(backDest)}`)
     }
 
-    const loadMemberDetail = async () => {
+    const loadMemberDetail = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      const memberId = route.params.id
+      if (reset) {
+        pageLoaded.value = false
+      }
       loading.value = true
       try {
-        const response = await getMemberDetail(route.params.id)
+        const response = await getMemberDetail(memberId)
+        if (requestSeq !== detailRequestSeq || String(memberId) !== String(route.params.id)) {
+          return
+        }
         memberInfo.value = response.data || {}
         // 设置分享页面信息
         if (memberInfo.value.name) {
           store.dispatch('common/setSharePageInfo', `队员「${memberInfo.value.name}」的主页`)
         }
+        pageLoaded.value = true
       } catch (error) {
         console.error('Failed to load member detail:', error)
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
     onMounted(() => {
-      loadMemberDetail()
+      loadMemberDetail({ reset: true })
     })
+
+    watch(
+      () => route.params.id,
+      () => {
+        loadMemberDetail({ reset: true })
+      }
+    )
 
     onUnmounted(() => {})
 
     return {
       loading,
+      pageLoaded,
       memberInfo,
       initials,
       isAdmin,

@@ -91,9 +91,13 @@
             style="margin-top: 12px; display: flex; gap: 8px; justify-content: right"
           >
             <button class="btn-modern primary" type="button" @click="submit" :disabled="submitting">
-              提交
+              <i-lucide-upload class="btn-icon" />
+              <span>提交</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="reset">重置</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
 
           <el-progress v-if="submitting" :percentage="progress" style="max-width: 420px" />
@@ -205,31 +209,18 @@ export default {
       }
     }
 
-    const reset = () => {
-      file.value = null
-      form.title = ''
-      form.lyricist = ''
-      form.composer = ''
-      form.arranger = ''
-      form.introduction = ''
-      form.is_restricted = false
-      form.visible_to_all = true
-      form.visible_to_alumni = false
-      form.visible_event_ids = []
-      form.visible_member_ids = []
-      progress.value = 0
-    }
-
     onMounted(async () => {
-      try {
-        const [er, mr] = await Promise.all([
-          getEventList({ page_size: 1000 }),
-          getMemberList({ page_size: 1000 })
-        ])
+      const [eventsResult, membersResult] = await Promise.allSettled([
+        getEventList({ page_size: 1000 }),
+        getMemberList({ page_size: 1000 })
+      ])
+      if (eventsResult.status === 'fulfilled') {
+        const er = eventsResult.value
         events.value = er?.data?.results || er?.data || []
+      }
+      if (membersResult.status === 'fulfilled') {
+        const mr = membersResult.value
         members.value = mr?.data?.results || mr?.data || []
-      } catch (e) {
-        // 下拉数据加载失败时保留空列表
       }
     })
 
@@ -242,7 +233,6 @@ export default {
       beforeUpload,
       doNothing,
       submit,
-      reset,
       events,
       members
     }

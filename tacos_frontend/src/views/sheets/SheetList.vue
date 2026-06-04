@@ -37,9 +37,13 @@
               type="button"
               @click="handleSearch"
             >
-              搜索
+              <i-lucide-search class="btn-icon" />
+              <span>搜索</span>
             </button>
-            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">重置</button>
+            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </el-form-item>
         </el-form>
       </div>
@@ -52,7 +56,8 @@
           <div class="actions">
             <ViewToggle v-model="viewMode" />
             <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="goUpload">
-              上传乐谱
+              <i-lucide-upload class="btn-icon" />
+              <span>上传乐谱</span>
             </button>
           </div>
         </div>
@@ -68,14 +73,22 @@
             <span class="loading-text">加载中...</span>
           </div>
           <table class="data-table" v-else>
+            <colgroup>
+              <col class="table-col-title" />
+              <col class="table-col-person" />
+              <col class="table-col-person" />
+              <col class="table-col-person" />
+              <col class="table-col-restricted" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 160px">曲名</th>
-                <th style="min-width: 100px">作曲</th>
-                <th style="min-width: 100px">作词</th>
-                <th style="min-width: 100px">编曲</th>
-                <th style="min-width: 90px">版权限制</th>
-                <th class="sticky-right" style="min-width: 160px">操作</th>
+                <th class="sheet-title-col">曲名</th>
+                <th class="person-col">作曲</th>
+                <th class="person-col">作词</th>
+                <th class="person-col">编曲</th>
+                <th class="center-col">版权限制</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -83,7 +96,7 @@
                 <td colspan="6" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in tableData" :key="row.id">
-                <td>
+                <td class="sheet-title-col">
                   <router-link
                     :to="`/sheets/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
                     >{{ row.title }}</router-link
@@ -97,24 +110,31 @@
                     <i class="el-icon-info" style="margin-left: 6px; color: #909399" />
                   </el-tooltip>
                 </td>
-                <td>{{ row.composer }}</td>
-                <td>{{ row.lyricist }}</td>
-                <td>{{ row.arranger }}</td>
-                <td>
+                <td class="person-col">{{ row.composer }}</td>
+                <td class="person-col">{{ row.lyricist }}</td>
+                <td class="person-col">{{ row.arranger }}</td>
+                <td class="center-col">
                   <el-tag :type="row.is_restricted ? 'danger' : 'success'">
                     {{ row.is_restricted ? '受限' : '公开' }}
                   </el-tag>
                 </td>
-                <td class="sticky-right">
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="viewDetail(row)">详情</button>
-                    <button class="btn-modern primary xsm-btn" @click="download(row)">下载</button>
+                    <button class="btn-modern ghost xsm-btn" @click="viewDetail(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>详情</span>
+                    </button>
+                    <button class="btn-modern primary xsm-btn" @click="download(row)">
+                      <i-lucide-download class="btn-icon" />
+                      <span>下载</span>
+                    </button>
                     <button
                       v-if="isAdmin"
                       class="btn-modern warning xsm-btn"
                       @click="editSheet(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </td>
@@ -150,27 +170,21 @@
                     </div>
                   </div>
                   <div class="row-actions">
-                    <button
-                      class="btn-modern ghost xsm-btn"
-                      style="width: 38px"
-                      @click="viewDetail(row)"
-                    >
-                      详情
+                    <button class="btn-modern ghost xsm-btn" @click="viewDetail(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>详情</span>
                     </button>
-                    <button
-                      class="btn-modern primary xsm-btn"
-                      style="width: 38px"
-                      @click="download(row)"
-                    >
-                      下载
+                    <button class="btn-modern primary xsm-btn" @click="download(row)">
+                      <i-lucide-download class="btn-icon" />
+                      <span>下载</span>
                     </button>
                     <button
                       v-if="isAdmin"
                       class="btn-modern warning xsm-btn"
-                      style="width: 38px"
                       @click="editSheet(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </div>
@@ -236,7 +250,8 @@ export default {
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const viewMode = ref('table')
 
-    const loading = ref(false)
+    const loading = ref(true)
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -253,40 +268,44 @@ export default {
     })
 
     const totalCount = ref(0)
-    const allSheets = ref([])
+    const sheets = ref([])
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
-        const aggregated = []
-        let page = 1
-        const pageSize = 200
-        let total = Infinity
-        while ((page - 1) * pageSize < total) {
-          const res = await getSheetList({
-            title__icontains: (urlState.value.title && urlState.value.title.trim()) || undefined,
-            composer__icontains:
-              (urlState.value.composer && urlState.value.composer.trim()) || undefined,
-            page,
-            page_size: pageSize
-          })
-          const results = Array.isArray(res.data?.results) ? res.data.results : []
-          total = Number(res.data?.count || results.length || 0)
-          aggregated.push(...results)
-          if (results.length < pageSize) {
-            break
-          }
-          page += 1
-          if (page > 50) {
-            break
-          }
+        const res = await getSheetList({
+          title__icontains: (urlState.value.title && urlState.value.title.trim()) || undefined,
+          composer__icontains:
+            (urlState.value.composer && urlState.value.composer.trim()) || undefined,
+          page: urlState.value.page,
+          page_size: urlState.value.pageSize
+        })
+        if (requestSeq !== listRequestSeq) {
+          return
         }
-        allSheets.value = aggregated
-        totalCount.value = Array.isArray(allSheets.value) ? allSheets.value.length : 0
+        const results = Array.isArray(res.data?.results) ? res.data.results : []
+        sheets.value = results
+        totalCount.value = Number(res.data?.count || results.length || 0)
+        const maxPage = Math.max(1, Math.ceil(totalCount.value / urlState.value.pageSize) || 1)
+        if (urlState.value.page > maxPage) {
+          urlState.value = { ...urlState.value, page: maxPage }
+          await loadData()
+        }
       } catch (e) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
+        if (e?.response?.status === 404 && urlState.value.page !== 1) {
+          urlState.value = { ...urlState.value, page: 1 }
+          await loadData()
+          return
+        }
         console.error(e)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -300,9 +319,11 @@ export default {
     }
     const handleSizeChange = val => {
       urlState.value = { ...urlState.value, pageSize: val }
+      loadData()
     }
     const handleCurrentChange = val => {
       urlState.value = { ...urlState.value, page: val }
+      loadData()
     }
 
     const goUpload = () => {
@@ -392,6 +413,7 @@ export default {
       () => [urlState.value.title, urlState.value.composer],
       () => {
         if (!isFirstLoad) {
+          urlState.value = { ...urlState.value, page: 1 }
           loadData()
         }
       },
@@ -419,8 +441,7 @@ export default {
     })
 
     const tableData = computed(() => {
-      const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return (allSheets.value || []).slice(start, start + urlState.value.pageSize)
+      return sheets.value || []
     })
 
     return {
@@ -448,6 +469,8 @@ export default {
 <style lang="scss" scoped>
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 .table-wrapper {
@@ -471,23 +494,58 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1050px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table .table-col-title {
+  width: 260px;
+}
+.data-table .table-col-person {
+  width: 150px;
+}
+.data-table .table-col-restricted {
+  width: 120px;
+}
+.data-table .table-col-action {
+  width: 220px;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
+}
+.data-table .center-col {
+  text-align: center;
+}
+.data-table .sheet-title-col,
+.data-table .person-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.data-table .action-col {
+  text-align: center;
+}
+.data-table .action-col .row-actions {
+  justify-content: center;
 }
 
 .card {
@@ -535,18 +593,28 @@ export default {
   background: #fff;
   border-left: 1px solid var(--border);
 }
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
+}
 
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 .sheet-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 16px 18px;
   background: #fff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.sheet-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 .sheet-card .card-head {
   display: flex;

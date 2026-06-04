@@ -6,16 +6,12 @@
           <h3 v-if="isEdit">编辑教师信息</h3>
           <h3 v-else>新增教师信息</h3>
         </div>
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-width="80px"
-          v-loading="loading"
-        >
+        <PageLoading v-if="!formReady" />
+
+        <el-form v-else ref="formRef" :model="formData" :rules="formRules" label-width="80px">
           <el-row :gutter="24">
             <el-col :span="12" :xs="24">
-              <el-form-item label="教师ID" prop="instructor_id">
+              <el-form-item label="身份证号" prop="instructor_id">
                 <el-input v-model="formData.instructor_id" :disabled="isEdit" />
               </el-form-item>
             </el-col>
@@ -83,9 +79,14 @@
               @click="handleSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '更新' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '更新' : '创建' }}</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>
@@ -94,14 +95,16 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
 import { getInstructorDetail, createInstructor, updateInstructor } from '@/api/personnel'
+import PageLoading from '@/components/common/PageLoading.vue'
 
 export default {
   name: 'InstructorForm',
+  components: { PageLoading },
   setup() {
     const router = useRouter()
     const route = useRoute()
@@ -112,7 +115,9 @@ export default {
     const submitting = ref(false)
 
     const isEdit = computed(() => !!route.params.id)
+    const formReady = ref(!isEdit.value)
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
+    let detailRequestSeq = 0
 
     const formData = reactive({
       instructor_id: '',
@@ -128,7 +133,7 @@ export default {
 
     const formRules = {
       instructor_id: [
-        { required: true, message: '请输入教师ID（工号或身份证号）', trigger: 'blur' },
+        { required: true, message: '请输入身份证号', trigger: 'blur' },
         {
           pattern: /^(\d{10}|\d{17}[\dXx])$/,
           message: '请输入10位工号或18位身份证号',
@@ -153,9 +158,19 @@ export default {
     }
 
     const loadForEdit = async () => {
+      const requestSeq = ++detailRequestSeq
+      const instructorId = route.params.id
+      if (!isEdit.value) {
+        formReady.value = true
+        return
+      }
+      formReady.value = false
       loading.value = true
       try {
-        const res = await getInstructorDetail(route.params.id)
+        const res = await getInstructorDetail(instructorId)
+        if (requestSeq !== detailRequestSeq || String(instructorId) !== String(route.params.id)) {
+          return
+        }
         const data = res.data || {}
         Object.assign(formData, {
           instructor_id: data.instructor_id || '',
@@ -168,8 +183,11 @@ export default {
           fee: data.fee || '',
           is_external: !!data.is_external
         })
+        formReady.value = true
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -225,9 +243,19 @@ export default {
       }
     })
 
+    watch(
+      () => route.params.id,
+      () => {
+        if (isEdit.value) {
+          loadForEdit()
+        }
+      }
+    )
+
     return {
       formRef,
       loading,
+      formReady,
       submitting,
       isEdit,
       formData,

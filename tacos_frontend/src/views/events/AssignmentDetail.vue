@@ -1,268 +1,280 @@
 <template>
-  <div class="page-container" v-loading="loading">
-    <div class="card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 16px">
-          <h3>{{ assignment.title || '作业详情' }}</h3>
-          <div class="actions">
-            <button v-if="canManage" class="btn-modern primary sm-btn" @click="goManage">
-              管理
-            </button>
-          </div>
-        </div>
+  <div class="page-container">
+    <div v-if="!pageLoaded" class="card">
+      <div class="card-content">
+        <PageLoading />
+      </div>
+    </div>
 
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="label">作业状态</div>
-            <div class="value">
-              <el-space wrap>
-                <el-tag v-if="isClosed" type="info" size="small">已过期</el-tag>
-                <el-tag v-else type="success" size="small">进行中</el-tag>
-                <el-tag :type="assignmentStatus.type" size="small">{{
-                  assignmentStatus.text
-                }}</el-tag>
-              </el-space>
+    <template v-else>
+      <div class="card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 16px">
+            <h3>{{ assignment.title || '作业详情' }}</h3>
+            <div class="actions">
+              <button v-if="canManage" class="btn-modern primary sm-btn" @click="goManage">
+                <i-lucide-settings class="btn-icon" />
+                <span>管理</span>
+              </button>
             </div>
           </div>
-          <div class="info-item">
-            <div class="label">作业截止时间</div>
-            <div class="value">{{ formatDateTime(assignment.deadline) }}</div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">作业状态</div>
+              <div class="value">
+                <el-space wrap>
+                  <el-tag v-if="isClosed" type="info" size="small">已过期</el-tag>
+                  <el-tag v-else type="success" size="small">进行中</el-tag>
+                  <el-tag :type="assignmentStatus.type" size="small">{{
+                    assignmentStatus.text
+                  }}</el-tag>
+                </el-space>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="label">作业截止时间</div>
+              <div class="value">{{ formatDateTime(assignment.deadline) }}</div>
+            </div>
+            <div
+              class="info-item"
+              v-if="assignment.attachments && assignment.attachments.length"
+              style="grid-column: span 1"
+            >
+              <div class="label">作业附件</div>
+              <div class="value">
+                <div class="attachment-list">
+                  <div v-for="att in assignment.attachments" :key="att.id" class="attachment-item">
+                    <el-image
+                      v-if="isImage(att.file)"
+                      :src="att.file"
+                      :preview-src-list="[att.file]"
+                      :preview-teleported="true"
+                      fit="cover"
+                      style="width: 140px; height: 90px; border-radius: 6px"
+                      @error="onImageError"
+                    />
+                    <audio
+                      v-else-if="isAudio(att.file)"
+                      :src="att.file"
+                      controls
+                      style="width: 260px"
+                      @error="onAudioError"
+                    />
+                    <el-link v-else :href="att.file" target="_blank" type="primary">{{
+                      getFileName(att.file)
+                    }}</el-link>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-item" v-if="assignment.description" style="grid-column: span 2">
+              <div class="label">作业说明</div>
+              <div class="value assignment-desc" v-html="formatText(assignment.description)"></div>
+            </div>
           </div>
-          <div
-            class="info-item"
-            v-if="assignment.attachments && assignment.attachments.length"
-            style="grid-column: span 1"
-          >
-            <div class="label">作业附件</div>
-            <div class="value">
-              <div class="attachment-list">
-                <div v-for="att in assignment.attachments" :key="att.id" class="attachment-item">
-                  <el-image
-                    v-if="isImage(att.file)"
-                    :src="att.file"
-                    :preview-src-list="[att.file]"
-                    :preview-teleported="true"
-                    fit="cover"
-                    style="width: 140px; height: 90px; border-radius: 6px"
-                    @error="onImageError"
-                  />
-                  <audio
-                    v-else-if="isAudio(att.file)"
-                    :src="att.file"
-                    controls
-                    style="width: 260px"
-                    @error="onAudioError"
-                  />
-                  <el-link v-else :href="att.file" target="_blank" type="primary">{{
-                    getFileName(att.file)
-                  }}</el-link>
+        </div>
+      </div>
+
+      <div class="card" v-if="submission">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 16px">
+            <h3>作业提交记录</h3>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">提交时间</div>
+              <div class="value">{{ formatDateTime(submission.submitted_at) }}</div>
+            </div>
+            <div class="info-item" v-if="submission.text">
+              <div class="label">提交文字</div>
+              <div class="value">
+                <span class="mono">{{ submission.text }}</span>
+              </div>
+            </div>
+
+            <div
+              class="info-item"
+              v-if="submission.attachments && submission.attachments.length"
+              style="grid-column: span 2"
+            >
+              <div class="label">已上传文件</div>
+              <div class="value">
+                <div class="attachment-list">
+                  <div v-for="att in submission.attachments" :key="att.id" class="attachment-item">
+                    <el-image
+                      v-if="isImage(att.file)"
+                      :src="att.file"
+                      :preview-src-list="[att.file]"
+                      :preview-teleported="true"
+                      fit="cover"
+                      style="width: 120px; height: 80px; border-radius: 6px"
+                      @error="onImageError"
+                    />
+                    <audio
+                      v-else-if="isAudio(att.file)"
+                      :src="att.file"
+                      controls
+                      style="width: 260px; margin-top: 6px"
+                      @error="onAudioError"
+                    />
+                    <el-link v-else :href="att.file" target="_blank" type="primary">{{
+                      getFileName(att.file)
+                    }}</el-link>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="info-item" v-if="assignment.description" style="grid-column: span 2">
-            <div class="label">作业说明</div>
-            <div class="value assignment-desc" v-html="formatText(assignment.description)"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <el-divider />
 
-    <div class="card" v-if="submission">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 16px">
-          <h3>作业提交记录</h3>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="label">提交时间</div>
-            <div class="value">{{ formatDateTime(submission.submitted_at) }}</div>
-          </div>
-          <div class="info-item" v-if="submission.text">
-            <div class="label">提交文字</div>
-            <div class="value">
-              <span class="mono">{{ submission.text }}</span>
+          <div class="section-title">批改结果</div>
+          <div class="info-grid" v-if="submission.graded_at">
+            <div class="info-item">
+              <div class="label">批改分数</div>
+              <div class="value">
+                <el-tag type="success">{{ submission.graded_score ?? '-' }}</el-tag>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="label">批改时间</div>
+              <div class="value">{{ formatDateTime(submission.graded_at) }}</div>
+            </div>
+            <div
+              class="info-item"
+              v-if="submission.graded_by_name || (isAdmin && submission.graded_by_user_id)"
+            >
+              <div class="label">批改人</div>
+              <div class="value">
+                <el-link type="primary" @click="goGrader(submission)">
+                  <el-tag type="success">{{
+                    submission.graded_by_name || (isAdmin ? submission.graded_by_user_id : '')
+                  }}</el-tag>
+                </el-link>
+              </div>
+            </div>
+            <div class="info-item" v-if="submission.graded_comment" style="grid-column: span 2">
+              <div class="label">批改评语</div>
+              <div class="value">{{ submission.graded_comment }}</div>
             </div>
           </div>
+          <p v-if="!submission.graded_at" style="color: #6b7280; margin-top: 8px">（尚未批改）</p>
+        </div>
+      </div>
 
-          <div
-            class="info-item"
-            v-if="submission.attachments && submission.attachments.length"
-            style="grid-column: span 2"
-          >
-            <div class="label">已上传文件</div>
-            <div class="value">
-              <div class="attachment-list">
-                <div v-for="att in submission.attachments" :key="att.id" class="attachment-item">
-                  <el-image
-                    v-if="isImage(att.file)"
-                    :src="att.file"
-                    :preview-src-list="[att.file]"
-                    :preview-teleported="true"
-                    fit="cover"
-                    style="width: 120px; height: 80px; border-radius: 6px"
-                    @error="onImageError"
-                  />
-                  <audio
-                    v-else-if="isAudio(att.file)"
-                    :src="att.file"
-                    controls
-                    style="width: 260px; margin-top: 6px"
-                    @error="onAudioError"
-                  />
-                  <el-link v-else :href="att.file" target="_blank" type="primary">{{
-                    getFileName(att.file)
-                  }}</el-link>
-                </div>
+      <div class="action-card-container">
+        <div
+          class="card card-clickable flat"
+          :class="{ disabled: !canSubmit }"
+          @click="openSubmitDialog"
+        >
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-file-edit />
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">{{ submission ? '重新提交作业' : '提交作业' }}</div>
+              <div class="stat-label">
+                {{ !canSubmit ? '作业已截止或不为活动成员' : '点击提交或更新作业' }}
               </div>
             </div>
           </div>
         </div>
-
-        <el-divider />
-
-        <div class="section-title">批改结果</div>
-        <div class="info-grid" v-if="submission.graded_at">
-          <div class="info-item">
-            <div class="label">批改分数</div>
-            <div class="value">
-              <el-tag type="success">{{ submission.graded_score ?? '-' }}</el-tag>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="label">批改时间</div>
-            <div class="value">{{ formatDateTime(submission.graded_at) }}</div>
-          </div>
-          <div
-            class="info-item"
-            v-if="submission.graded_by_name || (isAdmin && submission.graded_by_user_id)"
-          >
-            <div class="label">批改人</div>
-            <div class="value">
-              <el-link type="primary" @click="goGrader(submission)">
-                <el-tag type="success">{{
-                  submission.graded_by_name || (isAdmin ? submission.graded_by_user_id : '')
-                }}</el-tag>
-              </el-link>
-            </div>
-          </div>
-          <div class="info-item" v-if="submission.graded_comment" style="grid-column: span 2">
-            <div class="label">批改评语</div>
-            <div class="value">{{ submission.graded_comment }}</div>
-          </div>
-        </div>
-        <p v-if="!submission.graded_at" style="color: #6b7280; margin-top: 8px">（尚未批改）</p>
       </div>
-    </div>
 
-    <div class="action-card-container">
-      <div
-        class="card card-clickable flat"
-        :class="{ disabled: !canSubmit }"
-        @click="openSubmitDialog"
+      <el-dialog
+        v-model="submitDialog.visible"
+        :title="submission ? '重新提交作业' : '提交作业'"
+        :width="dialogWidth"
       >
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-file-edit />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">{{ submission ? '重新提交作业' : '提交作业' }}</div>
-            <div class="stat-label">
-              {{ !canSubmit ? '作业已截止或不为活动成员' : '点击提交或更新作业' }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <el-alert
+          v-if="!isParticipantMember"
+          title="仅活动参与成员可以提交作业"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px"
+        />
+        <el-alert
+          v-else-if="isClosed"
+          title="作业已截止，提交入口关闭"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 16px"
+        />
 
-    <el-dialog
-      v-model="submitDialog.visible"
-      :title="submission ? '重新提交作业' : '提交作业'"
-      :width="dialogWidth"
-    >
-      <el-alert
-        v-if="!isParticipantMember"
-        title="仅活动参与成员可以提交作业"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 16px"
-      />
-      <el-alert
-        v-else-if="isClosed"
-        title="作业已截止，提交入口关闭"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom: 16px"
-      />
+        <el-form label-width="80px">
+          <el-form-item label="文字">
+            <el-input
+              type="textarea"
+              v-model="form.text"
+              :rows="6"
+              placeholder="可选，输入作业文字内容"
+              :disabled="!canSubmit"
+            />
+          </el-form-item>
+          <el-form-item label="文件">
+            <el-upload
+              :file-list="fileList"
+              :on-remove="handleRemove"
+              :before-upload="beforeUpload"
+              :on-change="onFileChange"
+              :auto-upload="false"
+              :disabled="!canSubmit"
+              multiple
+            >
+              <button type="button" class="btn-modern ghost sm-btn" :disabled="!canSubmit">
+                <i-lucide-upload class="btn-icon" />
+                <span>选择文件</span>
+              </button>
+              <template #tip>
+                <div class="el-upload__tip">支持图片、音频等常见格式，每个不超过 5MB</div>
+              </template>
+            </el-upload>
+          </el-form-item>
+          <el-form-item label="附件选项">
+            <el-radio-group v-model="form.replace" :disabled="!canSubmit">
+              <el-radio :label="true">覆盖之前的附件</el-radio>
+              <el-radio :label="false">追加到之前的附件</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-form>
 
-      <el-form label-width="80px">
-        <el-form-item label="文字">
-          <el-input
-            type="textarea"
-            v-model="form.text"
-            :rows="6"
-            placeholder="可选，输入作业文字内容"
-            :disabled="!canSubmit"
-          />
-        </el-form-item>
-        <el-form-item label="文件">
-          <el-upload
-            :file-list="fileList"
-            :on-remove="handleRemove"
-            :before-upload="beforeUpload"
-            :on-change="onFileChange"
-            :auto-upload="false"
-            :disabled="!canSubmit"
-            multiple
+        <template #footer>
+          <button
+            type="button"
+            class="btn-modern ghost sm-btn"
+            @click="submitDialog.visible = false"
+            style="margin-right: 10px"
           >
-            <button type="button" class="btn-modern ghost sm-btn" :disabled="!canSubmit">
-              选择文件
-            </button>
-            <template #tip>
-              <div class="el-upload__tip">支持图片、音频等常见格式，每个不超过 5MB</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="附件选项">
-          <el-radio-group v-model="form.replace" :disabled="!canSubmit">
-            <el-radio :label="true">覆盖之前的附件</el-radio>
-            <el-radio :label="false">追加到之前的附件</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <button
-          type="button"
-          class="btn-modern ghost sm-btn"
-          @click="submitDialog.visible = false"
-          style="min-width: 50px; margin-right: 10px"
-        >
-          取消
-        </button>
-        <button
-          type="button"
-          class="btn-modern primary sm-btn"
-          :disabled="!canSubmit || submitting"
-          @click="doSubmit"
-          style="min-width: 50px"
-        >
-          {{ submitting ? '提交中...' : '提交' }}
-        </button>
-      </template>
-    </el-dialog>
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
+          <button
+            type="button"
+            class="btn-modern primary sm-btn"
+            :disabled="!canSubmit || submitting"
+            @click="doSubmit"
+          >
+            <i-lucide-send class="btn-icon" />
+            <span>{{ submitting ? '提交中...' : '提交' }}</span>
+          </button>
+        </template>
+      </el-dialog>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
+import PageLoading from '@/components/common/PageLoading.vue'
 import {
   getAssignmentDetail,
   submitAssignment,
@@ -280,22 +292,25 @@ dayjs.extend(timezone)
 export default {
   name: 'AssignmentDetail',
   components: {
+    PageLoading,
     'i-lucide-file-edit': LucideFileEdit
   },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const store = useStore()
-    const eventId = route.params.id
-    const assignmentId = route.params.assignmentId
+    const eventId = computed(() => route.params.id)
+    const assignmentId = computed(() => route.params.assignmentId)
 
     const loading = ref(false)
+    const pageLoaded = ref(false)
     const submitting = ref(false)
     const assignment = ref({ attachments: [] })
     const submission = ref(null)
     const event = ref({})
     const form = ref({ text: '', replace: true })
     const fileList = ref([])
+    let detailRequestSeq = 0
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
     const submitDialog = ref({ visible: false })
 
@@ -332,24 +347,52 @@ export default {
       return { text: '未批改', type: 'warning' }
     })
 
-    const load = async () => {
+    const load = async ({ reset = false } = {}) => {
+      const requestSeq = ++detailRequestSeq
+      const currentEventId = eventId.value
+      const currentAssignmentId = assignmentId.value
+      if (reset) {
+        pageLoaded.value = false
+      }
       loading.value = true
       try {
-        const [assignmentRes, eventRes] = await Promise.all([
-          getAssignmentDetail(eventId, assignmentId),
-          getEventDetail(eventId)
+        const [assignmentResult, eventResult, mySubResult] = await Promise.allSettled([
+          getAssignmentDetail(currentEventId, currentAssignmentId),
+          getEventDetail(currentEventId),
+          getMyAssignmentSubmission(currentEventId, currentAssignmentId)
         ])
+        if (
+          requestSeq !== detailRequestSeq ||
+          String(currentEventId) !== String(eventId.value) ||
+          String(currentAssignmentId) !== String(assignmentId.value)
+        ) {
+          return
+        }
+        if (assignmentResult.status === 'rejected') {
+          throw assignmentResult.reason
+        }
+        if (eventResult.status === 'rejected') {
+          throw eventResult.reason
+        }
+        const assignmentRes = assignmentResult.value
+        const eventRes = eventResult.value
+        const mySubRes = mySubResult.status === 'fulfilled' ? mySubResult.value : null
         assignment.value = assignmentRes.data
         event.value = eventRes.data
         // 设置分享页面信息
         if (assignment.value?.title) {
           store.dispatch('common/setSharePageInfo', `作业「${assignment.value.title}」`)
         }
-        const mySubRes = await getMyAssignmentSubmission(eventId, assignmentId)
         submission.value = mySubRes?.data?.submission || null
         form.value.text = submission.value?.text || ''
+        pageLoaded.value = true
+      } catch (error) {
+        console.error('加载作业详情失败：', error)
+        notify.error('加载作业详情失败')
       } finally {
-        loading.value = false
+        if (requestSeq === detailRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -363,7 +406,7 @@ export default {
           submitting.value = false
           return
         }
-        await submitAssignment(eventId, assignmentId, {
+        await submitAssignment(eventId.value, assignmentId.value, {
           text: form.value.text,
           files,
           replace: !!form.value.replace
@@ -405,8 +448,9 @@ export default {
       }
       return ok
     }
-    const goBack = () => router.push(`/events/${eventId}`)
-    const goManage = () => router.push(`/events/${eventId}/assignments/${assignmentId}/manage`)
+    const goBack = () => router.push(`/events/${eventId.value}`)
+    const goManage = () =>
+      router.push(`/events/${eventId.value}/assignments/${assignmentId.value}/manage`)
     const formatText = s => String(s || '').replace(/\n/g, '<br/>')
     const extractPathParam = rawUrl => {
       try {
@@ -453,7 +497,7 @@ export default {
       if (memberPublicId) {
         router.push({
           path: `/personnel/members/${memberPublicId}`,
-          query: { ref: `/events/${eventId}/assignments/${assignmentId}` }
+          query: { ref: `/events/${eventId.value}/assignments/${assignmentId.value}` }
         })
       }
     }
@@ -477,16 +521,23 @@ export default {
     }
 
     onMounted(() => {
-      load()
+      load({ reset: true })
       computeDialogWidth()
       window.addEventListener('resize', computeDialogWidth, { passive: true })
     })
+    watch(
+      () => [route.params.id, route.params.assignmentId],
+      () => {
+        load({ reset: true })
+      }
+    )
     onUnmounted(() => {
       window.removeEventListener('resize', computeDialogWidth)
     })
 
     return {
       loading,
+      pageLoaded,
       submitting,
       assignment,
       submission,

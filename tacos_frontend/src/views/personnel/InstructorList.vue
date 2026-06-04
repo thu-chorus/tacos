@@ -24,9 +24,13 @@
           </el-form-item>
           <el-form-item>
             <button class="btn-modern primary sm-btn" style="margin-right: 10px" type="submit">
-              搜索
+              <i-lucide-search class="btn-icon" />
+              <span>搜索</span>
             </button>
-            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">重置</button>
+            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </el-form-item>
         </el-form>
       </div>
@@ -39,7 +43,8 @@
           <div class="actions">
             <ViewToggle v-model="viewMode" />
             <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="handleAdd">
-              新增教师
+              <i-lucide-user-plus class="btn-icon" />
+              <span>新增教师</span>
             </button>
           </div>
         </div>
@@ -55,18 +60,30 @@
             <span class="loading-text">加载中...</span>
           </div>
           <table class="data-table" v-else>
+            <colgroup>
+              <col class="table-col-name" />
+              <col class="table-col-id" />
+              <col class="table-col-phone" />
+              <col class="table-col-vehicle" />
+              <col class="table-col-title" />
+              <col class="table-col-affiliation" />
+              <col class="table-col-address" />
+              <col class="table-col-fee" />
+              <col class="table-col-external" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 80px">姓名</th>
-                <th style="min-width: 120px">教师ID</th>
-                <th style="min-width: 100px">手机号</th>
-                <th style="min-width: 100px">车牌号</th>
-                <th style="min-width: 60px">职称</th>
-                <th style="min-width: 120px">单位</th>
-                <th style="min-width: 120px">地址</th>
-                <th style="min-width: 100px">课时费</th>
-                <th style="min-width: 80px">是否外请</th>
-                <th class="sticky-right" style="min-width: 100px">操作</th>
+                <th class="name-col">姓名</th>
+                <th class="id-col">身份证号</th>
+                <th class="phone-col">手机号</th>
+                <th class="vehicle-col">车牌号</th>
+                <th class="title-col">职称</th>
+                <th class="affiliation-col">单位</th>
+                <th class="address-col">地址</th>
+                <th class="center-col">课时费</th>
+                <th class="center-col">是否外请</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -74,23 +91,24 @@
                 <td colspan="10" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in tableData" :key="row.id">
-                <td>{{ row.name }}</td>
-                <td>{{ row.instructor_id }}</td>
-                <td>{{ row.phone_number || '-' }}</td>
-                <td>{{ row.vehicle_number || '-' }}</td>
-                <td>{{ row.title || '-' }}</td>
-                <td>{{ row.affiliation || '-' }}</td>
-                <td>{{ row.address || '-' }}</td>
-                <td>{{ row.fee || '-' }}</td>
-                <td>{{ row.is_external ? '是' : '否' }}</td>
-                <td class="sticky-right">
+                <td class="name-col">{{ row.name }}</td>
+                <td class="id-col">{{ row.instructor_id }}</td>
+                <td class="phone-col">{{ row.phone_number || '-' }}</td>
+                <td class="vehicle-col">{{ row.vehicle_number || '-' }}</td>
+                <td class="title-col">{{ row.title || '-' }}</td>
+                <td class="affiliation-col">{{ row.affiliation || '-' }}</td>
+                <td class="address-col">{{ row.address || '-' }}</td>
+                <td class="center-col">{{ row.fee || '-' }}</td>
+                <td class="center-col">{{ row.is_external ? '是' : '否' }}</td>
+                <td class="sticky-right action-col">
                   <div class="row-actions">
                     <button
                       v-if="isAdmin"
                       class="btn-modern warning xsm-btn"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </td>
@@ -112,12 +130,13 @@
                   <div class="left">
                     <div class="name">{{ row.name }}</div>
                     <div class="meta">
-                      ID：{{ row.instructor_id }} · {{ row.title || '无职称' }}
+                      身份证号：{{ row.instructor_id }} · {{ row.title || '无职称' }}
                     </div>
                   </div>
                   <div class="row-actions">
                     <button class="btn-modern warning xsm-btn edit-btn" @click="handleEdit(row)">
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </div>
@@ -182,9 +201,10 @@ export default {
     const router = useRouter()
     const route = useRoute()
 
-    const loading = ref(false)
+    const loading = ref(true)
     const viewMode = ref('table') // 'table' | 'card'
     const tableData = ref([])
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -236,6 +256,7 @@ export default {
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const res = await getInstructorList({
@@ -243,12 +264,20 @@ export default {
           page: urlState.value.page,
           page_size: urlState.value.pageSize
         })
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         totalCount.value = res.data?.count || 0
         tableData.value = Array.isArray(res.data?.results) ? res.data.results : []
       } catch (e) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         console.error('Failed to load instructor list:', e)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -297,20 +326,29 @@ export default {
 <style lang="scss" scoped>
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 .instructor-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 16px 18px;
   background: #fff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.instructor-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 .instructor-card .card-head {
   display: flex;
@@ -375,23 +413,79 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1388px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table .table-col-name {
+  width: 112px;
+}
+.data-table .table-col-id {
+  width: 190px;
+}
+.data-table .table-col-phone {
+  width: 128px;
+}
+.data-table .table-col-vehicle {
+  width: 120px;
+}
+.data-table .table-col-title {
+  width: 112px;
+}
+.data-table .table-col-affiliation {
+  width: 170px;
+}
+.data-table .table-col-address {
+  width: 220px;
+}
+.data-table .table-col-fee,
+.data-table .table-col-external {
+  width: 112px;
+}
+.data-table .table-col-action {
+  width: 112px;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
+}
+.data-table .center-col {
+  text-align: center;
+}
+.data-table .name-col,
+.data-table .id-col,
+.data-table .phone-col,
+.data-table .vehicle-col,
+.data-table .title-col,
+.data-table .affiliation-col,
+.data-table .address-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.data-table .action-col {
+  text-align: center;
+}
+.data-table .action-col .row-actions {
+  justify-content: center;
 }
 
 /* 操作列固定在右侧 */
@@ -408,6 +502,9 @@ export default {
   z-index: 1;
   background: #fff;
   border-left: 1px solid var(--border);
+}
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
 }
 
 .card {

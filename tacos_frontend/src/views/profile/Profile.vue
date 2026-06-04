@@ -1,500 +1,523 @@
 <template>
   <div class="page-container">
-    <div class="card">
+    <div v-if="!profileLoaded" class="card">
       <div class="card-content">
-        <div class="profile-header">
-          <div class="avatar-panel">
-            <button
-              v-if="hasMemberProfile"
-              class="avatar avatar-button"
-              type="button"
-              :disabled="uploadingAvatar"
-              aria-label="头像"
-              @click="openAvatarPicker"
-            >
-              <img
-                v-if="profileForm.avatar"
-                class="avatar-image"
-                :src="profileForm.avatar"
-                alt="头像"
+        <PageLoading />
+      </div>
+    </div>
+
+    <template v-else>
+      <div class="card">
+        <div class="card-content">
+          <div class="profile-header">
+            <div class="avatar-panel">
+              <button
+                v-if="hasMemberProfile"
+                class="avatar avatar-button"
+                type="button"
+                :disabled="uploadingAvatar"
+                aria-label="头像"
+                @click="openAvatarPicker"
+              >
+                <img
+                  v-if="profileForm.avatar"
+                  class="avatar-image"
+                  :src="profileForm.avatar"
+                  alt="头像"
+                />
+                <span v-else>{{ initials }}</span>
+                <span class="avatar-overlay"><i-lucide-camera :size="16" /></span>
+              </button>
+              <div v-else class="avatar">
+                <span>{{ initials }}</span>
+              </div>
+              <input
+                ref="avatarInput"
+                class="avatar-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                @change="handleAvatarChange"
               />
-              <span v-else>{{ initials }}</span>
-              <span class="avatar-overlay"><i-lucide-camera :size="16" /></span>
-            </button>
-            <div v-else class="avatar">
-              <span>{{ initials }}</span>
             </div>
-            <input
-              ref="avatarInput"
-              class="avatar-input"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              @change="handleAvatarChange"
+            <div class="meta">
+              <div class="name">{{ profileDisplayName }}</div>
+              <div class="tags">
+                <el-tag type="info">{{ profileForm.user_id }}</el-tag>
+                <el-tag v-if="profileForm.role" type="success">{{ roleDisplayName }}</el-tag>
+                <el-tag
+                  v-if="profileForm.voice_part"
+                  :type="getVoicePartType(profileForm.voice_part)"
+                  >{{ profileForm.voice_part || 'Other' }}</el-tag
+                >
+                <el-tag
+                  v-if="profileForm.tier"
+                  :type="profileForm.tier === '一队' ? 'danger' : 'primary'"
+                  >{{ profileForm.tier || '二队' }}</el-tag
+                >
+                <el-tag v-if="profileForm.status === 'ALUMNI'" type="warning">校友</el-tag>
+              </div>
+              <div class="signature-box">
+                <div class="signature-title">个性签名</div>
+                <div class="signature-content">
+                  {{ profileForm.portfolio || '这个人很低调，还没有填写签名。' }}
+                </div>
+              </div>
+              <div
+                v-if="Array.isArray(profileForm.titles) && profileForm.titles.length"
+                class="titles-block"
+              >
+                <div class="titles-title">获得称号</div>
+                <div class="titles">
+                  <TitleBadge
+                    v-for="t in profileForm.titles"
+                    :key="t.id + '-' + t.awarded_at"
+                    :title="t"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header" style="margin-bottom: 20px">
+            <h3>个人信息</h3>
+            <div class="actions">
+              <button class="btn-modern primary sm-btn" @click="goEdit">
+                <i-lucide-pencil class="btn-icon" />
+                <span>{{ profileActionText }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div v-if="profileForm.role" class="info-item">
+              <div class="label">账号角色</div>
+              <div class="value">{{ roleDisplayName }}</div>
+            </div>
+            <div v-if="!hasMemberProfile" class="info-item">
+              <div class="label">成员档案</div>
+              <div class="value">待完善</div>
+            </div>
+            <div v-if="profileForm.wechat_id" class="info-item">
+              <div class="label">微信号</div>
+              <div class="value">{{ profileForm.wechat_id }}</div>
+            </div>
+            <div v-if="profileForm.gender" class="info-item">
+              <div class="label">性别</div>
+              <div class="value">{{ profileForm.gender }}</div>
+            </div>
+            <div v-if="profileForm.department || profileForm.department_other" class="info-item">
+              <div class="label">院系</div>
+              <div class="value">
+                <span v-if="profileForm.department === '其他'">{{
+                  profileForm.department_other || '其他'
+                }}</span>
+                <span v-else>{{ profileForm.department }}</span>
+              </div>
+            </div>
+            <div v-if="profileForm.class_name" class="info-item">
+              <div class="label">班级</div>
+              <div class="value">{{ profileForm.class_name }}</div>
+            </div>
+            <div v-if="profileForm.join_month" class="info-item">
+              <div class="label">入队年月</div>
+              <div class="value">{{ profileForm.join_month }}</div>
+            </div>
+            <div v-if="profileForm.graduate_month" class="info-item">
+              <div class="label">预计毕业时间</div>
+              <div class="value">{{ profileForm.graduate_month }}</div>
+            </div>
+            <div v-if="profileForm.phone_number" class="info-item">
+              <div class="label">手机号</div>
+              <div class="value">{{ profileForm.phone_number }}</div>
+            </div>
+            <div v-if="profileForm.email" class="info-item">
+              <div class="label">邮箱</div>
+              <div class="value">{{ profileForm.email }}</div>
+            </div>
+            <div v-if="profileForm.dorm" class="info-item">
+              <div class="label">宿舍</div>
+              <div class="value">{{ profileForm.dorm }}</div>
+            </div>
+            <div v-if="profileForm.birthday" class="info-item">
+              <div class="label">生日</div>
+              <div class="value">{{ formatBirthday(profileForm.birthday) }}</div>
+            </div>
+            <div v-if="profileForm.hometown" class="info-item">
+              <div class="label">籍贯</div>
+              <div class="value">{{ profileForm.hometown }}</div>
+            </div>
+            <div v-if="profileForm.ethnicity" class="info-item">
+              <div class="label">民族</div>
+              <div class="value">{{ profileForm.ethnicity }}</div>
+            </div>
+            <div v-if="profileForm.political_status" class="info-item">
+              <div class="label">政治面貌</div>
+              <div class="value">{{ profileForm.political_status }}</div>
+            </div>
+            <div v-if="profileForm.political_affiliation" class="info-item">
+              <div class="label">党团关系所在</div>
+              <div class="value">{{ profileForm.political_affiliation }}</div>
+            </div>
+            <div v-if="profileForm.position" class="info-item">
+              <div class="label">职务</div>
+              <div class="value">{{ profileForm.position }}</div>
+            </div>
+            <div v-if="profileForm.is_specialty !== undefined" class="info-item">
+              <div class="label">特长生</div>
+              <div class="value">{{ profileForm.is_specialty ? '是' : '否' }}</div>
+            </div>
+            <div v-if="profileForm.is_centralized !== undefined" class="info-item">
+              <div class="label">集中班</div>
+              <div class="value">{{ profileForm.is_centralized ? '是' : '否' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="isAlumni" class="card alumni-window-card">
+        <div class="card-content" style="padding: 10px 15px">
+          <div class="header alumni-window-header">
+            <div class="alumni-window-title">
+              <h3>校友窗口</h3>
+              <el-tag :type="alumniContactStatusType" size="small">
+                {{ alumniContactStatusText }}
+              </el-tag>
+            </div>
+            <div class="actions">
+              <button
+                class="btn-modern primary sm-btn"
+                type="button"
+                :disabled="savingAlumniContact"
+                @click="openAlumniDialog"
+              >
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑校友信息</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="alumni-window-summary">
+            <div class="alumni-summary-item primary">
+              <div class="summary-label">毕业时间</div>
+              <div class="summary-value">
+                {{ displayAlumniValue(alumniContact.graduation_month) }}
+              </div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">当前城市</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniContact.current_city) }}</div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">行业</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniContact.industry) }}</div>
+            </div>
+            <div class="alumni-summary-item">
+              <div class="summary-label">单位 / 职位</div>
+              <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <el-dialog v-model="alumniDialog.visible" title="编辑校友信息" :width="dialogWidth">
+        <el-form
+          ref="alumniFormRef"
+          :model="alumniDraft"
+          :rules="alumniRules"
+          label-width="88px"
+          class="alumni-contact-form"
+        >
+          <div class="alumni-form-grid">
+            <div class="alumni-form-field">
+              <el-form-item label="毕业时间" prop="graduation_month">
+                <el-date-picker
+                  v-model="alumniDraft.graduation_month"
+                  type="month"
+                  placeholder="请选择"
+                  format="YYYY-MM"
+                  value-format="YYYY-MM"
+                  class="field-control"
+                />
+              </el-form-item>
+            </div>
+            <div class="alumni-form-field">
+              <el-form-item label="允许联系">
+                <el-switch
+                  v-model="alumniDraft.allow_contact"
+                  active-text="开放"
+                  inactive-text="关闭"
+                />
+              </el-form-item>
+            </div>
+            <div class="alumni-form-field">
+              <el-form-item label="当前城市">
+                <el-input v-model="alumniDraft.current_city" placeholder="可选" />
+              </el-form-item>
+            </div>
+            <div class="alumni-form-field">
+              <el-form-item label="行业">
+                <el-input v-model="alumniDraft.industry" placeholder="可选" />
+              </el-form-item>
+            </div>
+            <div class="alumni-form-field">
+              <el-form-item label="单位">
+                <el-input v-model="alumniDraft.company" placeholder="可选" />
+              </el-form-item>
+            </div>
+            <div class="alumni-form-field">
+              <el-form-item label="职位">
+                <el-input v-model="alumniDraft.job_title" placeholder="可选" />
+              </el-form-item>
+            </div>
+          </div>
+          <el-form-item label="个人简介">
+            <el-input
+              v-model="alumniDraft.bio"
+              type="textarea"
+              :rows="3"
+              placeholder="可填写当前方向、背景或希望公开的信息"
+            />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input
+              v-model="alumniDraft.contact_note"
+              type="textarea"
+              :rows="3"
+              placeholder="可填写偏好的联系渠道、时间段或说明"
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <button
+            class="btn-modern ghost sm-btn"
+            type="button"
+            style="margin-right: 10px"
+            @click="alumniDialog.visible = false"
+          >
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
+          <button
+            class="btn-modern primary sm-btn"
+            type="button"
+            :disabled="savingAlumniContact"
+            @click="handleSaveAlumniContact"
+          >
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
+          </button>
+        </template>
+      </el-dialog>
+
+      <div v-if="hasMemberProfile && hiddenFields.length > 0" class="card">
+        <div class="card-content">
+          <div class="header" style="margin-bottom: 8px">
+            <h3>已隐藏的信息</h3>
+            <div class="actions">
+              <button class="btn-modern primary sm-btn" @click="openPrivacyDialog">
+                <i-lucide-shield-check class="btn-icon" />
+                <span>隐私设置</span>
+              </button>
+            </div>
+          </div>
+          <div class="hidden-info-grid">
+            <div v-for="field in hiddenFields" :key="field" class="hidden-field-item">
+              <div class="field-label">{{ getFieldDisplayName(field) }}</div>
+              <div class="field-value">{{ getFieldValue(field) || '未填写' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-grid cards-row">
+        <div class="card card-clickable flat" @click="openPasswordDialog">
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-lock />
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">修改个人密码</div>
+              <div class="stat-label">点击修改密码</div>
+            </div>
+          </div>
+        </div>
+        <div
+          v-if="hasMemberProfile && hiddenFields.length === 0"
+          class="card card-clickable flat"
+          @click="openPrivacyDialog"
+        >
+          <div class="card-content stat-content">
+            <div class="stat-icon">
+              <i-lucide-eye-off />
+            </div>
+            <div class="stat-info">
+              <div class="stat-number">隐私设置</div>
+              <div class="stat-label">管理隐藏信息</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <el-dialog
+        v-model="avatarCropDialog.visible"
+        title="调整头像"
+        :width="dialogWidth"
+        @closed="resetAvatarCrop"
+      >
+        <div class="avatar-cropper">
+          <div
+            class="avatar-crop-frame"
+            @pointerdown="startAvatarCropDrag"
+            @pointermove="moveAvatarCropDrag"
+            @pointerup="endAvatarCropDrag"
+            @pointercancel="endAvatarCropDrag"
+            @pointerleave="endAvatarCropDrag"
+          >
+            <img
+              v-if="avatarCrop.previewUrl"
+              class="avatar-crop-image"
+              :src="avatarCrop.previewUrl"
+              :style="avatarCropImageStyle"
+              alt="头像预览"
+              draggable="false"
             />
           </div>
-          <div class="meta">
-            <div class="name">{{ profileForm.name || '未命名' }}</div>
-            <div class="tags">
-              <el-tag type="info">{{ profileForm.user_id }}</el-tag>
-              <el-tag v-if="profileForm.role" type="success">{{ roleDisplayName }}</el-tag>
-              <el-tag
-                v-if="profileForm.voice_part"
-                :type="getVoicePartType(profileForm.voice_part)"
-                >{{ profileForm.voice_part || 'Other' }}</el-tag
-              >
-              <el-tag
-                v-if="profileForm.tier"
-                :type="profileForm.tier === '一队' ? 'danger' : 'primary'"
-                >{{ profileForm.tier || '二队' }}</el-tag
-              >
-              <el-tag v-if="profileForm.status === 'ALUMNI'" type="warning">校友</el-tag>
-            </div>
-            <div class="signature-box">
-              <div class="signature-title">个性签名</div>
-              <div class="signature-content">
-                {{ profileForm.portfolio || '这个人很低调，还没有填写签名。' }}
-              </div>
-            </div>
-            <div
-              v-if="Array.isArray(profileForm.titles) && profileForm.titles.length"
-              class="titles-block"
-            >
-              <div class="titles-title">获得称号</div>
-              <div class="titles">
-                <TitleBadge
-                  v-for="t in profileForm.titles"
-                  :key="t.id + '-' + t.awarded_at"
-                  :title="t"
-                />
-              </div>
-            </div>
+          <div class="avatar-crop-control">
+            <span class="crop-control-label">缩放</span>
+            <el-slider
+              v-model="avatarCrop.zoom"
+              :min="1"
+              :max="3"
+              :step="0.01"
+              :show-tooltip="false"
+            />
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header" style="margin-bottom: 20px">
-          <h3>个人信息</h3>
-          <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="goEdit">
-              {{ profileActionText }}
-            </button>
-          </div>
-        </div>
-        <div class="info-grid">
-          <div v-if="profileForm.role" class="info-item">
-            <div class="label">账号角色</div>
-            <div class="value">{{ roleDisplayName }}</div>
-          </div>
-          <div v-if="!hasMemberProfile" class="info-item">
-            <div class="label">成员档案</div>
-            <div class="value">待完善</div>
-          </div>
-          <div v-if="profileForm.wechat_id" class="info-item">
-            <div class="label">微信号</div>
-            <div class="value">{{ profileForm.wechat_id }}</div>
-          </div>
-          <div v-if="profileForm.gender" class="info-item">
-            <div class="label">性别</div>
-            <div class="value">{{ profileForm.gender }}</div>
-          </div>
-          <div v-if="profileForm.department || profileForm.department_other" class="info-item">
-            <div class="label">院系</div>
-            <div class="value">
-              <span v-if="profileForm.department === '其他'">{{
-                profileForm.department_other || '其他'
-              }}</span>
-              <span v-else>{{ profileForm.department }}</span>
-            </div>
-          </div>
-          <div v-if="profileForm.class_name" class="info-item">
-            <div class="label">班级</div>
-            <div class="value">{{ profileForm.class_name }}</div>
-          </div>
-          <div v-if="profileForm.join_month" class="info-item">
-            <div class="label">入队年月</div>
-            <div class="value">{{ profileForm.join_month }}</div>
-          </div>
-          <div v-if="profileForm.graduate_month" class="info-item">
-            <div class="label">预计毕业时间</div>
-            <div class="value">{{ profileForm.graduate_month }}</div>
-          </div>
-          <div v-if="profileForm.phone_number" class="info-item">
-            <div class="label">手机号</div>
-            <div class="value">{{ profileForm.phone_number }}</div>
-          </div>
-          <div v-if="profileForm.email" class="info-item">
-            <div class="label">邮箱</div>
-            <div class="value">{{ profileForm.email }}</div>
-          </div>
-          <div v-if="profileForm.dorm" class="info-item">
-            <div class="label">宿舍</div>
-            <div class="value">{{ profileForm.dorm }}</div>
-          </div>
-          <div v-if="profileForm.birthday" class="info-item">
-            <div class="label">生日</div>
-            <div class="value">{{ formatBirthday(profileForm.birthday) }}</div>
-          </div>
-          <div v-if="profileForm.hometown" class="info-item">
-            <div class="label">籍贯</div>
-            <div class="value">{{ profileForm.hometown }}</div>
-          </div>
-          <div v-if="profileForm.ethnicity" class="info-item">
-            <div class="label">民族</div>
-            <div class="value">{{ profileForm.ethnicity }}</div>
-          </div>
-          <div v-if="profileForm.political_status" class="info-item">
-            <div class="label">政治面貌</div>
-            <div class="value">{{ profileForm.political_status }}</div>
-          </div>
-          <div v-if="profileForm.political_affiliation" class="info-item">
-            <div class="label">党团关系所在</div>
-            <div class="value">{{ profileForm.political_affiliation }}</div>
-          </div>
-          <div v-if="profileForm.position" class="info-item">
-            <div class="label">职务</div>
-            <div class="value">{{ profileForm.position }}</div>
-          </div>
-          <div v-if="profileForm.is_specialty !== undefined" class="info-item">
-            <div class="label">特长生</div>
-            <div class="value">{{ profileForm.is_specialty ? '是' : '否' }}</div>
-          </div>
-          <div v-if="profileForm.is_centralized !== undefined" class="info-item">
-            <div class="label">集中班</div>
-            <div class="value">{{ profileForm.is_centralized ? '是' : '否' }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="isAlumni" class="card alumni-window-card">
-      <div class="card-content" style="padding: 10px 15px">
-        <div class="header alumni-window-header">
-          <div class="alumni-window-title">
-            <h3>校友窗口</h3>
-            <el-tag :type="alumniContactStatusType" size="small">
-              {{ alumniContactStatusText }}
-            </el-tag>
-          </div>
-          <div class="actions">
-            <button
-              class="btn-modern primary sm-btn"
-              type="button"
-              :disabled="savingAlumniContact"
-              @click="openAlumniDialog"
-            >
-              编辑校友信息
-            </button>
-          </div>
-        </div>
-
-        <div class="alumni-window-summary">
-          <div class="alumni-summary-item primary">
-            <div class="summary-label">毕业时间</div>
-            <div class="summary-value">
-              {{ displayAlumniValue(alumniContact.graduation_month) }}
-            </div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">当前城市</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniContact.current_city) }}</div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">行业</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniContact.industry) }}</div>
-          </div>
-          <div class="alumni-summary-item">
-            <div class="summary-label">单位 / 职位</div>
-            <div class="summary-value">{{ displayAlumniValue(alumniCompanyTitle) }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <el-dialog v-model="alumniDialog.visible" title="编辑校友信息" :width="dialogWidth">
-      <el-form
-        ref="alumniFormRef"
-        :model="alumniDraft"
-        :rules="alumniRules"
-        label-width="88px"
-        class="alumni-contact-form"
-      >
-        <div class="alumni-form-grid">
-          <div class="alumni-form-field">
-            <el-form-item label="毕业时间" prop="graduation_month">
-              <el-date-picker
-                v-model="alumniDraft.graduation_month"
-                type="month"
-                placeholder="请选择"
-                format="YYYY-MM"
-                value-format="YYYY-MM"
-                class="field-control"
-              />
-            </el-form-item>
-          </div>
-          <div class="alumni-form-field">
-            <el-form-item label="允许联系">
-              <el-switch
-                v-model="alumniDraft.allow_contact"
-                active-text="开放"
-                inactive-text="关闭"
-              />
-            </el-form-item>
-          </div>
-          <div class="alumni-form-field">
-            <el-form-item label="当前城市">
-              <el-input v-model="alumniDraft.current_city" placeholder="可选" />
-            </el-form-item>
-          </div>
-          <div class="alumni-form-field">
-            <el-form-item label="行业">
-              <el-input v-model="alumniDraft.industry" placeholder="可选" />
-            </el-form-item>
-          </div>
-          <div class="alumni-form-field">
-            <el-form-item label="单位">
-              <el-input v-model="alumniDraft.company" placeholder="可选" />
-            </el-form-item>
-          </div>
-          <div class="alumni-form-field">
-            <el-form-item label="职位">
-              <el-input v-model="alumniDraft.job_title" placeholder="可选" />
-            </el-form-item>
-          </div>
-        </div>
-        <el-form-item label="个人简介">
-          <el-input
-            v-model="alumniDraft.bio"
-            type="textarea"
-            :rows="3"
-            placeholder="可填写当前方向、背景或希望公开的信息"
-          />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="alumniDraft.contact_note"
-            type="textarea"
-            :rows="3"
-            placeholder="可填写偏好的联系渠道、时间段或说明"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <button
-          class="btn-modern ghost sm-btn"
-          type="button"
-          style="margin-right: 10px"
-          @click="alumniDialog.visible = false"
-        >
-          取消
-        </button>
-        <button
-          class="btn-modern primary sm-btn"
-          type="button"
-          :disabled="savingAlumniContact"
-          @click="handleSaveAlumniContact"
-        >
-          保存
-        </button>
-      </template>
-    </el-dialog>
-
-    <div v-if="hasMemberProfile && hiddenFields.length > 0" class="card">
-      <div class="card-content">
-        <div class="header" style="margin-bottom: 8px">
-          <h3>已隐藏的信息</h3>
-          <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="openPrivacyDialog">隐私设置</button>
-          </div>
-        </div>
-        <div class="hidden-info-grid">
-          <div v-for="field in hiddenFields" :key="field" class="hidden-field-item">
-            <div class="field-label">{{ getFieldDisplayName(field) }}</div>
-            <div class="field-value">{{ getFieldValue(field) || '未填写' }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-grid cards-row">
-      <div class="card card-clickable flat" @click="openPasswordDialog">
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-lock />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">修改个人密码</div>
-            <div class="stat-label">点击修改密码</div>
-          </div>
-        </div>
-      </div>
-      <div
-        v-if="hasMemberProfile && hiddenFields.length === 0"
-        class="card card-clickable flat"
-        @click="openPrivacyDialog"
-      >
-        <div class="card-content stat-content">
-          <div class="stat-icon">
-            <i-lucide-eye-off />
-          </div>
-          <div class="stat-info">
-            <div class="stat-number">隐私设置</div>
-            <div class="stat-label">管理隐藏信息</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <el-dialog
-      v-model="avatarCropDialog.visible"
-      title="调整头像"
-      :width="dialogWidth"
-      @closed="resetAvatarCrop"
-    >
-      <div class="avatar-cropper">
-        <div
-          class="avatar-crop-frame"
-          @pointerdown="startAvatarCropDrag"
-          @pointermove="moveAvatarCropDrag"
-          @pointerup="endAvatarCropDrag"
-          @pointercancel="endAvatarCropDrag"
-          @pointerleave="endAvatarCropDrag"
-        >
-          <img
-            v-if="avatarCrop.previewUrl"
-            class="avatar-crop-image"
-            :src="avatarCrop.previewUrl"
-            :style="avatarCropImageStyle"
-            alt="头像预览"
-            draggable="false"
-          />
-        </div>
-        <div class="avatar-crop-control">
-          <span class="crop-control-label">缩放</span>
-          <el-slider
-            v-model="avatarCrop.zoom"
-            :min="1"
-            :max="3"
-            :step="0.01"
-            :show-tooltip="false"
-          />
-        </div>
-      </div>
-      <template #footer>
-        <button
-          class="btn-modern ghost sm-btn"
-          type="button"
-          :disabled="uploadingAvatar"
-          style="margin-right: 10px"
-          @click="avatarCropDialog.visible = false"
-        >
-          取消
-        </button>
-        <button
-          class="btn-modern primary sm-btn"
-          type="button"
-          :disabled="uploadingAvatar"
-          @click="handleCropAvatar"
-        >
-          保存
-        </button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="privacyDialog.visible" title="隐私设置" :width="dialogWidth">
-      <div class="privacy-content">
-        <div class="privacy-description">
-          <p>
-            选择你想要隐藏的个人信息字段。普通队员无法看到你主动隐藏的信息，被隐藏的信息只有在需要时才能由管理员读取。
-          </p>
-        </div>
-        <div class="privacy-fields">
-          <div
-            v-for="field in privacyFieldOptions"
-            :key="field.value"
-            class="privacy-field-item"
-            :class="{ active: tempHiddenFields.includes(field.value) }"
-            @click="togglePrivacyField(field.value)"
+        <template #footer>
+          <button
+            class="btn-modern ghost sm-btn"
+            type="button"
+            :disabled="uploadingAvatar"
+            style="margin-right: 10px"
+            @click="avatarCropDialog.visible = false"
           >
-            <div class="privacy-checkbox">
-              <svg
-                v-if="tempHiddenFields.includes(field.value)"
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
+          <button
+            class="btn-modern primary sm-btn"
+            type="button"
+            :disabled="uploadingAvatar"
+            @click="handleCropAvatar"
+          >
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
+          </button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="privacyDialog.visible" title="隐私设置" :width="dialogWidth">
+        <div class="privacy-content">
+          <div class="privacy-description">
+            <p>
+              选择你想要隐藏的个人信息字段。普通队员无法看到你主动隐藏的信息，被隐藏的信息只有在需要时才能由管理员读取。
+            </p>
+          </div>
+          <div class="privacy-fields">
+            <div
+              v-for="field in privacyFieldOptions"
+              :key="field.value"
+              class="privacy-field-item"
+              :class="{ active: tempHiddenFields.includes(field.value) }"
+              @click="togglePrivacyField(field.value)"
+            >
+              <div class="privacy-checkbox">
+                <svg
+                  v-if="tempHiddenFields.includes(field.value)"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span class="privacy-label">{{ field.label }}</span>
             </div>
-            <span class="privacy-label">{{ field.label }}</span>
           </div>
         </div>
-      </div>
-      <template #footer>
-        <button
-          class="btn-modern ghost sm-btn"
-          @click="privacyDialog.visible = false"
-          style="margin-right: 10px"
-        >
-          取消
-        </button>
-        <button
-          class="btn-modern primary sm-btn"
-          :loading="savingPrivacy"
-          @click="handleSavePrivacy"
-        >
-          保存
-        </button>
-      </template>
-    </el-dialog>
+        <template #footer>
+          <button
+            class="btn-modern ghost sm-btn"
+            @click="privacyDialog.visible = false"
+            style="margin-right: 10px"
+          >
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
+          <button
+            class="btn-modern primary sm-btn"
+            :loading="savingPrivacy"
+            @click="handleSavePrivacy"
+          >
+            <i-lucide-save class="btn-icon" />
+            <span>保存</span>
+          </button>
+        </template>
+      </el-dialog>
 
-    <el-dialog v-model="passwordDialog.visible" title="修改密码" :width="dialogWidth">
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordRef" label-width="100px">
-        <el-form-item label="原密码" prop="old_password">
-          <el-input v-model="passwordForm.old_password" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" prop="new_password">
-          <el-input v-model="passwordForm.new_password" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="new_password_confirm">
-          <el-input v-model="passwordForm.new_password_confirm" type="password" show-password />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <button
-          class="btn-modern ghost sm-btn"
-          @click="passwordDialog.visible = false"
-          style="margin-right: 10px"
-        >
-          取消
-        </button>
-        <button
-          class="btn-modern primary sm-btn"
-          :loading="savingPassword"
-          @click="handleChangePassword"
-        >
-          提交
-        </button>
-      </template>
-    </el-dialog>
+      <el-dialog v-model="passwordDialog.visible" title="修改密码" :width="dialogWidth">
+        <el-form :model="passwordForm" :rules="passwordRules" ref="passwordRef" label-width="100px">
+          <el-form-item label="原密码" prop="old_password">
+            <el-input v-model="passwordForm.old_password" type="password" show-password />
+          </el-form-item>
+          <el-form-item label="新密码" prop="new_password">
+            <el-input v-model="passwordForm.new_password" type="password" show-password />
+          </el-form-item>
+          <el-form-item label="确认新密码" prop="new_password_confirm">
+            <el-input v-model="passwordForm.new_password_confirm" type="password" show-password />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <button
+            class="btn-modern ghost sm-btn"
+            @click="passwordDialog.visible = false"
+            style="margin-right: 10px"
+          >
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
+          <button
+            class="btn-modern primary sm-btn"
+            :loading="savingPassword"
+            @click="handleChangePassword"
+          >
+            <i-lucide-key-round class="btn-icon" />
+            <span>提交</span>
+          </button>
+        </template>
+      </el-dialog>
+    </template>
   </div>
 </template>
 
 <script>
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 import { notify } from '@/utils/notify'
 import { getProfile, changePassword, updateProfile } from '@/api/auth'
 import { getMyAlumniProfile, updateMyAlumniProfile, uploadMemberAvatar } from '@/api/personnel'
 import { Lock as LucideLock, EyeOff as LucideEyeOff, Camera as LucideCamera } from 'lucide-vue-next'
+import PageLoading from '@/components/common/PageLoading.vue'
 import TitleBadge from '@/components/common/TitleBadge.vue'
 
 export default {
@@ -503,13 +526,16 @@ export default {
     'i-lucide-lock': LucideLock,
     'i-lucide-eye-off': LucideEyeOff,
     'i-lucide-camera': LucideCamera,
+    PageLoading,
     TitleBadge
   },
   setup() {
     const router = useRouter()
+    const store = useStore()
     const passwordRef = ref()
     const avatarInput = ref()
     const uploadingAvatar = ref(false)
+    const profileLoaded = ref(false)
     const avatarCropDialog = ref({ visible: false })
     const avatarCropFrameSize = 240
     const avatarCropOutputSize = 512
@@ -609,6 +635,19 @@ export default {
       const parts = [alumniContact.company, alumniContact.job_title].filter(Boolean)
       return parts.join(' / ')
     })
+    const cachedUserName = computed(() => {
+      const user = store.getters['auth/user'] || {}
+      return user.name || user.user_id || ''
+    })
+    const profileDisplayName = computed(() => {
+      if (profileForm.name) {
+        return profileForm.name
+      }
+      if (cachedUserName.value) {
+        return cachedUserName.value
+      }
+      return profileLoaded.value ? '未命名' : '加载中...'
+    })
 
     const displayAlumniValue = value => {
       return value || '未填写'
@@ -671,7 +710,7 @@ export default {
     }
 
     const initials = computed(() => {
-      const name = profileForm.name || ''
+      const name = profileForm.name || cachedUserName.value || ''
       return name ? name.substring(0, 1) : 'T'
     })
 
@@ -798,47 +837,59 @@ export default {
       }
     }
 
-    const loadProfile = async () => {
-      const res = await getProfile()
-      const user = res.data?.user || {}
-      const member = res.data?.member || {}
+    const loadProfile = async ({ reset = false } = {}) => {
+      if (reset) {
+        profileLoaded.value = false
+      }
+      try {
+        const res = await getProfile()
+        const user = res.data?.user || {}
+        const member = res.data?.member || {}
 
-      profileForm.user_id = user.user_id || ''
-      profileForm.role = user.role || ''
-      // 使用 member.name，因为队员信息中的姓名是可编辑的
-      profileForm.name = member.name || user.name || ''
+        profileForm.user_id = user.user_id || ''
+        profileForm.role = user.role || ''
+        // 使用 member.name，因为队员信息中的姓名是可编辑的
+        profileForm.name = member.name || user.name || ''
 
-      memberId.value = member.id || null
+        memberId.value = member.id || null
 
-      Object.assign(profileForm, {
-        avatar: member.avatar || '',
-        wechat_id: member.wechat_id || '',
-        gender: member.gender || '',
-        voice_part: member.voice_part || '',
-        department: member.department || '',
-        department_other: member.department_other || '',
-        class_name: member.class_name || '',
-        phone_number: member.phone_number || '',
-        email: member.email || '',
-        dorm: member.dorm || '',
-        birthday: member.birthday || '',
-        hometown: member.hometown || '',
-        ethnicity: member.ethnicity || '',
-        political_status: member.political_status || '',
-        political_affiliation: member.political_affiliation || '',
-        is_specialty: !!member.is_specialty,
-        is_centralized: !!member.is_centralized,
-        position: member.position || '',
-        join_month: member.join_month || '',
-        graduate_month: member.graduate_month || '',
-        tier: member.tier || '',
-        status: member.status || '',
-        portfolio: member.portfolio || '',
-        hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
-        titles: Array.isArray(member.titles) ? member.titles : []
-      })
-      if (member.status === 'ALUMNI') {
-        await loadAlumniContact()
+        Object.assign(profileForm, {
+          avatar: member.avatar || '',
+          wechat_id: member.wechat_id || '',
+          gender: member.gender || '',
+          voice_part: member.voice_part || '',
+          department: member.department || '',
+          department_other: member.department_other || '',
+          class_name: member.class_name || '',
+          phone_number: member.phone_number || '',
+          email: member.email || '',
+          dorm: member.dorm || '',
+          birthday: member.birthday || '',
+          hometown: member.hometown || '',
+          ethnicity: member.ethnicity || '',
+          political_status: member.political_status || '',
+          political_affiliation: member.political_affiliation || '',
+          is_specialty: !!member.is_specialty,
+          is_centralized: !!member.is_centralized,
+          position: member.position || '',
+          join_month: member.join_month || '',
+          graduate_month: member.graduate_month || '',
+          tier: member.tier || '',
+          status: member.status || '',
+          portfolio: member.portfolio || '',
+          hidden_fields: Array.isArray(member.hidden_fields) ? member.hidden_fields : [],
+          titles: Array.isArray(member.titles) ? member.titles : []
+        })
+        if (member.status === 'ALUMNI') {
+          if (member.alumni_profile) {
+            copyAlumniFields(alumniContact, member.alumni_profile)
+            copyAlumniFields(alumniDraft, member.alumni_profile)
+          } else {
+            await loadAlumniContact()
+          }
+        }
+      } finally {
+        profileLoaded.value = true
       }
     }
 
@@ -1151,7 +1202,7 @@ export default {
     }
 
     onMounted(() => {
-      loadProfile()
+      loadProfile({ reset: true })
       computeDialogWidths()
       window.addEventListener('resize', computeDialogWidths, { passive: true })
     })
@@ -1175,6 +1226,8 @@ export default {
       hasMemberProfile,
       profileActionText,
       roleDisplayName,
+      profileDisplayName,
+      profileLoaded,
       avatarInput,
       avatarCropDialog,
       avatarCrop,

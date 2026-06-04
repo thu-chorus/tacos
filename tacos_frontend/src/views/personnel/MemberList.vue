@@ -114,9 +114,13 @@
               type="button"
               @click="handleSearch"
             >
-              搜索
+              <i-lucide-search class="btn-icon" />
+              <span>搜索</span>
             </button>
-            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">重置</button>
+            <button class="btn-modern ghost sm-btn" type="button" @click="handleReset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </el-form-item>
         </el-form>
       </div>
@@ -133,17 +137,13 @@
               class="btn-modern ghost sm-btn"
               @click="handleExport"
               :disabled="exporting"
-              style="width: 48px"
             >
-              导出
+              <i-lucide-download class="btn-icon" />
+              <span>导出</span>
             </button>
-            <button
-              v-if="isAdmin"
-              class="btn-modern primary sm-btn"
-              @click="handleAdd"
-              style="width: 70px"
-            >
-              新增队员
+            <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="handleAdd">
+              <i-lucide-user-plus class="btn-icon" />
+              <span>新增队员</span>
             </button>
           </div>
         </div>
@@ -159,59 +159,89 @@
             <span class="loading-text">加载中...</span>
           </div>
           <table class="data-table" v-else>
+            <colgroup>
+              <col class="table-col-member" />
+              <col v-if="isAdmin" class="table-col-user-id" />
+              <col class="table-col-voice" />
+              <col class="table-col-tier" />
+              <col class="table-col-status" />
+              <col class="table-col-department" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 140px">姓名</th>
-                <th v-if="isAdmin" style="min-width: 120px">学号</th>
-                <th style="min-width: 80px">声部</th>
-                <th style="min-width: 80px">梯队</th>
-                <th style="min-width: 80px">状态</th>
-                <th style="min-width: 150px">院系</th>
-                <th style="min-width: 90px">入队年月</th>
-                <th class="sticky-right" style="min-width: 140px">操作</th>
+                <th class="member-col">队员</th>
+                <th v-if="isAdmin" class="user-id-col">学号</th>
+                <th class="center-col">声部</th>
+                <th class="center-col">梯队</th>
+                <th class="center-col">状态</th>
+                <th class="department-col">院系</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="tableData.length === 0">
-                <td :colspan="isAdmin ? 8 : 7" class="empty-cell">暂无数据</td>
+                <td :colspan="isAdmin ? 7 : 6" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in tableData" :key="row.id">
-                <td>
-                  <router-link
-                    :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
-                    >{{ row.name }}</router-link
-                  >
+                <td class="member-col">
+                  <div class="member-profile table-profile">
+                    <router-link
+                      class="member-avatar sm"
+                      :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
+                    >
+                      <img
+                        v-if="row.avatar"
+                        :src="row.avatar"
+                        :alt="`${row.name || '队员'}头像`"
+                        loading="lazy"
+                        decoding="async"
+                        @error="handleAvatarError(row)"
+                      />
+                      <span v-else>{{ getMemberInitial(row) }}</span>
+                    </router-link>
+                    <div class="member-profile-main">
+                      <router-link
+                        class="member-name-link"
+                        :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
+                        >{{ row.name || '-' }}</router-link
+                      >
+                    </div>
+                  </div>
                 </td>
-                <td v-if="isAdmin">{{ row.user_id }}</td>
-                <td>
+                <td v-if="isAdmin" class="user-id-col">{{ row.user_id || '-' }}</td>
+                <td class="center-col">
                   <el-tag :type="getVoicePartType(row.voice_part)">
-                    {{ row.voice_part }}
+                    {{ row.voice_part || '-' }}
                   </el-tag>
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="row.tier === '一队' ? 'danger' : 'primary'">
-                    {{ row.tier }}
+                    {{ row.tier || '-' }}
                   </el-tag>
                 </td>
-                <td>
+                <td class="center-col">
                   <el-tag :type="getMemberStatusType(row.status)">
                     {{ getMemberStatusLabel(row.status) }}
                   </el-tag>
                 </td>
-                <td>
+                <td class="department-col">
                   <span v-if="row.department === '其他'">{{ row.department_other || '其他' }}</span>
-                  <span v-else>{{ row.department }}</span>
+                  <span v-else>{{ row.department || '-' }}</span>
                 </td>
-                <td>{{ row.join_month }}</td>
-                <td class="sticky-right">
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">查看</button>
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
+                    </button>
                     <button
                       v-if="isAdmin"
                       class="btn-modern warning xsm-btn"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
                   </div>
                 </td>
@@ -229,58 +259,71 @@
             <div v-if="tableData.length === 0" class="empty-cell">暂无数据</div>
             <div v-else class="cards-grid">
               <div class="member-card" v-for="row in tableData" :key="row.id">
-                <div class="card-head">
-                  <div class="left">
-                    <div class="name">
-                      <router-link
-                        :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
-                        >{{ row.name }}</router-link
-                      >
-                    </div>
-                    <div class="meta" v-if="isAdmin">学号：{{ row.user_id || '-' }}</div>
-                    <div class="tags">
-                      <el-tag size="small" :type="getVoicePartType(row.voice_part)">{{
-                        row.voice_part || '-'
-                      }}</el-tag>
-                      <el-tag size="small" :type="row.tier === '一队' ? 'danger' : 'primary'">{{
-                        row.tier || '-'
-                      }}</el-tag>
-                      <el-tag size="small" :type="getMemberStatusType(row.status)">
-                        {{ getMemberStatusLabel(row.status) }}
-                      </el-tag>
+                <div class="member-card-row">
+                  <router-link
+                    class="member-avatar lg"
+                    :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
+                  >
+                    <img
+                      v-if="row.avatar"
+                      :src="row.avatar"
+                      :alt="`${row.name || '队员'}头像`"
+                      loading="lazy"
+                      decoding="async"
+                      @error="handleAvatarError(row)"
+                    />
+                    <span v-else>{{ getMemberInitial(row) }}</span>
+                  </router-link>
+
+                  <div class="member-card-body">
+                    <router-link
+                      class="member-card-name"
+                      :to="`/personnel/members/${row.id}?ref=${encodeURIComponent($route.fullPath)}`"
+                      >{{ row.name || '-' }}</router-link
+                    >
+                    <div class="member-card-fields">
+                      <div v-if="isAdmin" class="member-card-field">
+                        <span class="member-card-label">学号</span>
+                        <span class="member-card-value">{{ row.user_id || '-' }}</span>
+                      </div>
+                      <div class="member-card-field">
+                        <span class="member-card-label">声部</span>
+                        <el-tag size="small" :type="getVoicePartType(row.voice_part)">
+                          {{ row.voice_part || '-' }}
+                        </el-tag>
+                      </div>
+                      <div class="member-card-field">
+                        <span class="member-card-label">梯队</span>
+                        <el-tag size="small" :type="row.tier === '一队' ? 'danger' : 'primary'">
+                          {{ row.tier || '-' }}
+                        </el-tag>
+                      </div>
+                      <div class="member-card-field">
+                        <span class="member-card-label">状态</span>
+                        <el-tag size="small" :type="getMemberStatusType(row.status)">
+                          {{ getMemberStatusLabel(row.status) }}
+                        </el-tag>
+                      </div>
+                      <div class="member-card-field department-field">
+                        <span class="member-card-label">院系</span>
+                        <span class="member-card-value">{{ getMemberDepartment(row) }}</span>
+                      </div>
                     </div>
                   </div>
-                  <div class="row-actions">
-                    <button
-                      class="btn-modern ghost xsm-btn"
-                      style="width: 38px"
-                      @click="handleView(row)"
-                    >
-                      查看
+
+                  <div class="row-actions member-card-actions">
+                    <button class="btn-modern ghost xsm-btn" @click="handleView(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
                     </button>
                     <button
                       v-if="isAdmin"
                       class="btn-modern primary xsm-btn"
-                      style="width: 38px"
                       @click="handleEdit(row)"
                     >
-                      编辑
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
                     </button>
-                  </div>
-                </div>
-                <div class="info-grid">
-                  <div class="info-item">
-                    <div class="label">院系</div>
-                    <div class="value">
-                      <span v-if="row.department === '其他'">{{
-                        row.department_other || '其他'
-                      }}</span>
-                      <span v-else>{{ row.department || '-' }}</span>
-                    </div>
-                  </div>
-                  <div class="info-item">
-                    <div class="label">入队年月</div>
-                    <div class="value">{{ row.join_month || '-' }}</div>
                   </div>
                 </div>
               </div>
@@ -324,8 +367,9 @@ export default {
     const router = useRouter()
     const route = useRoute()
 
-    const loading = ref(false)
+    const loading = ref(true)
     const viewMode = ref('table') // 'table' | 'card'
+    let listRequestSeq = 0
 
     // 使用 useUrlState 同步筛选和分页状态到 URL
     const { state: urlState, resetState: resetUrlState } = useUrlState({
@@ -348,7 +392,7 @@ export default {
 
     const totalCount = ref(0)
 
-    const allMembers = ref([])
+    const members = ref([])
     const exporting = ref(false)
 
     const isAdmin = computed(() => store.getters['auth/isAdmin'])
@@ -374,6 +418,21 @@ export default {
 
     const getMemberStatusLabel = status => getMemberStatus(status).label
     const getMemberStatusType = status => getMemberStatus(status).type || 'info'
+    const getMemberInitial = row => {
+      const name = String(row?.name || row?.user_id || 'T').trim()
+      return name ? name.substring(0, 1).toUpperCase() : 'T'
+    }
+    const getMemberDepartment = row => {
+      if (row?.department === '其他') {
+        return row.department_other || '其他'
+      }
+      return row?.department || '未填写院系'
+    }
+    const handleAvatarError = row => {
+      if (row) {
+        row.avatar = ''
+      }
+    }
 
     const handleSearch = () => {
       urlState.value = { ...urlState.value, page: 1 }
@@ -428,52 +487,54 @@ export default {
       const maxPage = Math.max(1, Math.ceil(totalCount.value / newPageSize) || 1)
       const newPage = urlState.value.page > maxPage ? maxPage : urlState.value.page
       urlState.value = { ...urlState.value, pageSize: newPageSize, page: newPage }
+      loadData()
     }
 
     const handleCurrentChange = val => {
       urlState.value = { ...urlState.value, page: val }
+      loadData()
     }
 
     const loadData = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
-        const aggregated = []
-        let page = 1
-        const pageSize = 200
-        let total = Infinity
-        while ((page - 1) * pageSize < total) {
-          const response = await getMemberList({
-            name__icontains: urlState.value.name || undefined,
-            user_id: urlState.value.userId || undefined,
-            voice_part: urlState.value.voicePart || undefined,
-            tier: urlState.value.tier || undefined,
-            status: urlState.value.status || undefined,
-            birthday_month: urlState.value.birthdayMonth || undefined,
-            department: urlState.value.department || undefined,
-            page,
-            page_size: pageSize
-          })
-          const results = Array.isArray(response.data?.results) ? response.data.results : []
-          total = Number(response.data?.count || results.length || 0)
-          aggregated.push(...results)
-          if (results.length < pageSize) {
-            break
-          }
-          page += 1
-          if (page > 50) {
-            break
-          }
+        const response = await getMemberList({
+          name__icontains: urlState.value.name || undefined,
+          user_id: urlState.value.userId || undefined,
+          voice_part: urlState.value.voicePart || undefined,
+          tier: urlState.value.tier || undefined,
+          status: urlState.value.status || undefined,
+          birthday_month: urlState.value.birthdayMonth || undefined,
+          department: urlState.value.department || undefined,
+          page: urlState.value.page,
+          page_size: urlState.value.pageSize
+        })
+        if (requestSeq !== listRequestSeq) {
+          return
         }
-        allMembers.value = aggregated
-        totalCount.value = Array.isArray(allMembers.value) ? allMembers.value.length : 0
+        const results = Array.isArray(response.data?.results) ? response.data.results : []
+        members.value = results
+        totalCount.value = Number(response.data?.count || results.length || 0)
         const maxPage = Math.max(1, Math.ceil(totalCount.value / urlState.value.pageSize) || 1)
         if (urlState.value.page > maxPage) {
           urlState.value = { ...urlState.value, page: maxPage }
+          await loadData()
         }
       } catch (error) {
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
+        if (error?.response?.status === 404 && urlState.value.page !== 1) {
+          urlState.value = { ...urlState.value, page: 1 }
+          await loadData()
+          return
+        }
         console.error('Failed to load member list:', error)
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -491,6 +552,7 @@ export default {
       ],
       () => {
         if (!isFirstLoad) {
+          urlState.value = { ...urlState.value, page: 1 }
           loadData()
         }
       },
@@ -510,8 +572,7 @@ export default {
     )
 
     const tableData = computed(() => {
-      const start = (urlState.value.page - 1) * urlState.value.pageSize
-      return (allMembers.value || []).slice(start, start + urlState.value.pageSize)
+      return members.value || []
     })
 
     const totalPages = computed(() => {
@@ -534,6 +595,9 @@ export default {
       getVoicePartType,
       getMemberStatusLabel,
       getMemberStatusType,
+      getMemberInitial,
+      getMemberDepartment,
+      handleAvatarError,
       MEMBER_STATUSES,
       handleSearch,
       handleReset,
@@ -552,59 +616,206 @@ export default {
 <style lang="scss" scoped>
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+.member-profile {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.table-profile {
+  max-width: 190px;
+}
+
+.member-profile-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-name-link {
+  color: var(--el-color-primary);
+}
+
+.member-card-name {
+  color: #111827;
+}
+
+.member-name-link,
+.member-card-name {
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.member-name-link:hover,
+.member-card-name:hover {
+  color: var(--el-color-primary);
+}
+
+.member-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.member-avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--el-color-primary);
+  border: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.member-avatar:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.member-avatar.sm {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  font-size: 13px;
+}
+
+.member-avatar.lg {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  font-size: 19px;
+}
+
+.member-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #fff;
 }
 
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 .member-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 16px 18px;
   background: #fff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
-.member-card .card-head {
+
+.member-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.member-card-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  margin-top: 6px;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
 }
-.member-card .name {
-  font-weight: 600;
-  color: #111827;
+
+.member-card-name {
+  max-width: 180px;
+  font-size: 15px;
 }
-.member-card .meta {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-.member-card .tags {
-  display: inline-flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-.member-card .info-grid {
+
+.member-card-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  align-items: center;
+  column-gap: 18px;
+  row-gap: 10px;
+  width: 100%;
 }
-.member-card .info-item {
+
+.member-card-field {
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
 }
-.member-card .label {
+
+.member-card-label {
+  color: #9ca3af;
   font-size: 12px;
-  color: #6b7280;
+  line-height: 1;
 }
-.member-card .value {
-  font-size: 14px;
+
+.member-card-value {
+  max-width: 100%;
   color: #374151;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.member-card-actions {
+  margin-left: auto;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .department-field {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .member-card-row {
+    flex-wrap: wrap;
+  }
+
+  .member-card-body {
+    flex-basis: calc(100% - 66px);
+  }
+
+  .member-card-actions {
+    width: 100%;
+    margin-left: 66px;
+    justify-content: flex-start;
+  }
+
+  .member-card-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-profile {
+    max-width: 190px;
+  }
 }
 
 .loading-area {
@@ -650,25 +861,70 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1072px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table .table-col-member {
+  width: 190px;
+}
+.data-table .table-col-user-id {
+  width: 120px;
+}
+.data-table .table-col-voice,
+.data-table .table-col-tier,
+.data-table .table-col-status {
+  width: 132px;
+}
+.data-table .table-col-department {
+  width: 230px;
+}
+.data-table .table-col-action {
+  width: 132px;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
-
+.data-table .center-col {
+  text-align: center;
+}
+.data-table .member-col {
+  padding-left: 16px;
+}
+.data-table .user-id-col,
+.data-table .department-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.data-table .department-col {
+  padding-left: 48px;
+}
+.data-table .action-col {
+  text-align: center;
+}
+.data-table .action-col .row-actions {
+  justify-content: center;
+}
 /* 操作列固定在右侧 */
 .data-table thead th.sticky-right {
   position: sticky;
@@ -683,5 +939,8 @@ export default {
   z-index: 1;
   background: #fff;
   border-left: 1px solid var(--border);
+}
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
 }
 </style>

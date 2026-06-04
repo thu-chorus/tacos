@@ -207,6 +207,16 @@ class EventBasicSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    def _has_member(self, obj: Event, relation: str, member_id: int | None) -> bool:
+        if member_id is None:
+            return False
+        prefetched = getattr(obj, f"prefetched_{relation}", None)
+        if prefetched is not None:
+            return any(
+                getattr(member, "id", None) == member_id for member in prefetched
+            )
+        return getattr(obj, relation).filter(pk=member_id).exists()
+
     def get_relation(self, obj: Event) -> str:
         """返回 event_admin、member 或 not_member。"""
         request = (
@@ -221,9 +231,10 @@ class EventBasicSerializer(serializers.ModelSerializer):
             else None
         )
         if member:
-            if obj.admins.filter(pk=getattr(member, "id", None)).exists():
+            member_id = getattr(member, "id", None)
+            if self._has_member(obj, "admins", member_id):
                 return "event_admin"
-            if obj.participants.filter(pk=getattr(member, "id", None)).exists():
+            if self._has_member(obj, "participants", member_id):
                 return "member"
         return "not_member"
 
@@ -241,7 +252,7 @@ class EventBasicSerializer(serializers.ModelSerializer):
             else None
         )
         if member:
-            return obj.participants.filter(pk=getattr(member, "id", None)).exists()
+            return self._has_member(obj, "participants", getattr(member, "id", None))
         return False
 
     def get_announcement_images(self, obj: Event) -> list[dict]:

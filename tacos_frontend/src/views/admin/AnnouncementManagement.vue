@@ -6,7 +6,10 @@
           <h3>系统公告管理</h3>
           <div class="actions">
             <ViewToggle v-model="viewMode" />
-            <button class="btn-modern primary sm-btn" @click="openCreate">新增公告</button>
+            <button class="btn-modern primary sm-btn" @click="openCreate">
+              <i-lucide-plus class="btn-icon" />
+              <span>新增公告</span>
+            </button>
           </div>
         </div>
 
@@ -21,12 +24,18 @@
             <span class="loading-text">加载中...</span>
           </div>
           <table class="data-table" v-else>
+            <colgroup>
+              <col class="table-col-time" />
+              <col class="table-col-title" />
+              <col class="table-col-content" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 170px">发布时间</th>
-                <th style="min-width: 170px">公告标题</th>
-                <th style="min-width: 220px">公告内容</th>
-                <th class="sticky-right" style="min-width: 110px">操作</th>
+                <th class="time-col">发布时间</th>
+                <th class="title-col">公告标题</th>
+                <th class="content-col">公告内容</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -34,16 +43,20 @@
                 <td colspan="4" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in announcements" :key="row.id">
-                <td>{{ formatDateTime(row.publish_time) }}</td>
-                <td class="content-cell" style="font-weight: bold">
+                <td class="time-col">{{ formatDateTime(row.publish_time) }}</td>
+                <td class="title-col" style="font-weight: bold">
                   {{ row.title || '(无标题)' }}
                 </td>
-                <td class="content-cell">{{ row.content }}</td>
-                <td class="sticky-right">
+                <td class="content-col content-cell">{{ row.content }}</td>
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="openEdit(row)">编辑</button>
+                    <button class="btn-modern ghost xsm-btn" @click="openEdit(row)">
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
+                    </button>
                     <button class="btn-modern danger xsm-btn" @click="confirmDelete(row)">
-                      删除
+                      <i-lucide-trash-2 class="btn-icon" />
+                      <span>删除</span>
                     </button>
                   </div>
                 </td>
@@ -64,9 +77,13 @@
                 <div class="card-head">
                   <div class="time">{{ formatDateTime(row.publish_time) }}</div>
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="openEdit(row)">编辑</button>
+                    <button class="btn-modern ghost xsm-btn" @click="openEdit(row)">
+                      <i-lucide-pencil class="btn-icon" />
+                      <span>编辑</span>
+                    </button>
                     <button class="btn-modern danger xsm-btn" @click="confirmDelete(row)">
-                      删除
+                      <i-lucide-trash-2 class="btn-icon" />
+                      <span>删除</span>
                     </button>
                   </div>
                 </div>
@@ -127,8 +144,14 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn-modern ghost" @click="dialogVisible = false">取消</button>
-            <button class="btn-modern primary" @click="submit">保存</button>
+            <button class="btn-modern ghost" @click="dialogVisible = false">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
+            <button class="btn-modern primary" @click="submit">
+              <i-lucide-save class="btn-icon" />
+              <span>保存</span>
+            </button>
           </div>
         </div>
       </div>
@@ -177,11 +200,12 @@ export default {
   setup() {
     const announcements = ref([])
     const total = ref(0)
-    const loading = ref(false)
+    const loading = ref(true)
     const dialogVisible = ref(false)
     const editing = ref(false)
     const currentId = ref(null)
     const viewMode = ref('table') // 'table' | 'card'
+    let listRequestSeq = 0
 
     // 删除确认对话框
     const deleteConfirmDialog = reactive({
@@ -209,13 +233,19 @@ export default {
     })
 
     const loadList = async () => {
+      const requestSeq = ++listRequestSeq
       loading.value = true
       try {
         const res = await getAnnouncements(query)
+        if (requestSeq !== listRequestSeq) {
+          return
+        }
         announcements.value = res.data?.results || []
         total.value = res.data?.count || 0
       } finally {
-        loading.value = false
+        if (requestSeq === listRequestSeq) {
+          loading.value = false
+        }
       }
     }
 
@@ -394,27 +424,59 @@ export default {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 860px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table .table-col-time {
+  width: 180px;
+}
+.data-table .table-col-title {
+  width: 220px;
+}
+.data-table .table-col-content {
+  width: auto;
+}
+.data-table .table-col-action {
+  width: 160px;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
+}
+.data-table .time-col,
+.data-table .title-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .data-table .content-cell {
   white-space: pre-wrap;
   line-height: 1.6;
+}
+.data-table .action-col {
+  text-align: center;
+}
+.data-table .action-col .row-actions {
+  justify-content: center;
 }
 .data-table thead th.sticky-right {
   position: sticky;
@@ -430,6 +492,9 @@ export default {
   background: #fff;
   border-left: 1px solid var(--border);
 }
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
+}
 .empty-cell {
   text-align: center;
   color: #9ca3af;
@@ -439,13 +504,20 @@ export default {
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 .announcement-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  padding: 16px 18px;
   background: #fff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.announcement-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 .announcement-card .card-head {
   display: flex;
@@ -470,16 +542,10 @@ export default {
 
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
-.btn-modern.danger {
-  border-color: #ef4444;
-  color: #ef4444;
-}
-.btn-modern.danger:hover {
-  background: #fef2f2;
-}
-
 .modal-overlay {
   position: fixed;
   inset: 0;

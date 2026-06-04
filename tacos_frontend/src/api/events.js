@@ -1,11 +1,44 @@
 import { request } from './index'
+import {
+  CACHE_TTL,
+  getCached,
+  invalidateCache,
+  invalidateCachePrefix,
+  normalizeCacheKey
+} from '@/utils/requestCache'
 
-export function getEventList(params = {}) {
-  return request.get('/events/', params)
+function invalidateEventCaches(id) {
+  if (id) {
+    invalidateCache(`events:detail:${id}`)
+  }
+  invalidateCachePrefix('events:list:')
 }
 
-export function getEventDetail(id) {
-  return request.get(`/events/${id}/`)
+function invalidateEventMemberData(id) {
+  invalidateEventCaches(id)
+  invalidateCache('auth:profile')
+}
+
+function invalidateEventSheetRelations() {
+  invalidateCachePrefix('sheets:detail:')
+}
+
+export function getEventList(params = {}, options = {}) {
+  return getCached(
+    `events:list:${normalizeCacheKey(params)}`,
+    () => request.get('/events/', params),
+    {
+      ttl: CACHE_TTL.LIST,
+      ...options
+    }
+  )
+}
+
+export function getEventDetail(id, options = {}) {
+  return getCached(`events:detail:${id}`, () => request.get(`/events/${id}/`), {
+    ttl: CACHE_TTL.DETAIL,
+    ...options
+  })
 }
 
 export function getEventAdminDetail(id) {
@@ -13,19 +46,30 @@ export function getEventAdminDetail(id) {
 }
 
 export function createEvent(data) {
-  return request.post('/events/', data)
+  return request.post('/events/', data).finally(() => {
+    invalidateEventCaches()
+    invalidateEventSheetRelations()
+  })
 }
 
 export function updateEvent(id, data) {
-  return request.put(`/events/${id}/`, data)
+  return request.put(`/events/${id}/`, data).finally(() => {
+    invalidateEventCaches(id)
+    invalidateEventSheetRelations()
+  })
 }
 
 export function deleteEvent(id) {
-  return request.delete(`/events/${id}/`)
+  return request.delete(`/events/${id}/`).finally(() => {
+    invalidateEventCaches(id)
+    invalidateEventSheetRelations()
+  })
 }
 
 export function joinEvent(id) {
-  return request.post(`/events/${id}/join/`)
+  return request.post(`/events/${id}/join/`).finally(() => {
+    invalidateEventMemberData(id)
+  })
 }
 
 export function getCheckinStatus(eventId) {
@@ -59,6 +103,10 @@ export function getCheckinRecords(eventId, params = {}) {
 
 export function getCheckinSessionDetail(eventId, sessionId) {
   return request.get(`/events/${eventId}/checkin/sessions/${sessionId}/detail/`)
+}
+
+export function getCheckinSummary(eventId, sessionId) {
+  return request.get(`/events/${eventId}/checkin/summary/`, { session_id: sessionId })
 }
 
 export function deleteCheckinSession(eventId, sessionId) {
@@ -210,12 +258,20 @@ export function getEventMembers(eventId, params = {}) {
   return request.get(`/events/${eventId}/members/`, params)
 }
 
+export function exportEventMembers(eventId, params = {}) {
+  return request.get(`/events/${eventId}/members/export/`, params, { responseType: 'blob' })
+}
+
 export function uploadEventAnnouncementImage(eventId, file, onProgress) {
   const form = new FormData()
   form.append('image', file)
-  return request.upload(`/events/${eventId}/announcement/images/`, form, onProgress)
+  return request.upload(`/events/${eventId}/announcement/images/`, form, onProgress).finally(() => {
+    invalidateEventCaches(eventId)
+  })
 }
 
 export function deleteEventAnnouncementImage(eventId, imageId) {
-  return request.delete(`/events/${eventId}/announcement/images/${imageId}/`)
+  return request.delete(`/events/${eventId}/announcement/images/${imageId}/`).finally(() => {
+    invalidateEventCaches(eventId)
+  })
 }

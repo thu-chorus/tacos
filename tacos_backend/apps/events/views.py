@@ -4,8 +4,9 @@ import logging
 import os
 from io import BytesIO
 from typing import Any
+from urllib.parse import quote
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from django.utils.encoding import smart_str
@@ -44,11 +45,28 @@ from .serializers import (
     EventCheckinRecordSerializer,
     EventCheckinSessionSerializer,
     EventSerializer,
+    MemberBriefSerializer,
 )
 
 
 class EventViewSet(EnvelopeModelViewSet):
-    queryset = Event.objects.all().order_by("-start_date", "-created_at")
+    queryset = (
+        Event.objects.prefetch_related(
+            Prefetch(
+                "admins",
+                queryset=Member.objects.only("id"),
+                to_attr="prefetched_admins",
+            ),
+            Prefetch(
+                "participants",
+                queryset=Member.objects.only("id"),
+                to_attr="prefetched_participants",
+            ),
+            "announcement_images",
+        )
+        .all()
+        .order_by("-start_date", "-created_at")
+    )
     serializer_class = EventSerializer
     permission_classes = [IsAdminOrEventAdmin]
     lookup_field = "public_id"
@@ -59,6 +77,114 @@ class EventViewSet(EnvelopeModelViewSet):
         "end_date": ["exact", "lte", "gte"],
     }
     search_fields = ["name"]
+
+    @staticmethod
+    def _is_site_admin(user) -> bool:
+        return getattr(user, "is_staff", False) or getattr(user, "role", "") in (
+            "Admin",
+            "SuperAdmin",
+        )
+
+    @staticmethod
+    def _is_event_admin(event: Event, user) -> bool:
+        member = getattr(user, "member", None)
+        return bool(member and event.admins.filter(pk=member.id).exists())
+
+    @staticmethod
+    def _filter_event_members(event: Event, params) -> Any:
+        qs = event.participants.select_related("user").all()
+        name = params.get("name")
+        user_id = params.get("user_id")
+        voice_part = params.get("voice_part")
+        if name:
+            qs = qs.filter(name__icontains=name)
+        if user_id:
+            qs = qs.filter(user__user_id__icontains=user_id)
+        if voice_part:
+            qs = qs.filter(voice_part=voice_part)
+        return qs
+
+    @staticmethod
+    def _safe_export_text(value: Any) -> str:
+        """转为 Excel 安全文本，避免长数字丢失格式或公式注入。"""
+        text = "" if value is None else str(value)
+        stripped = text.lstrip("\t ")
+        if stripped[:1] in {"=", "+", "-", "@"} or text[:1] == "\t":
+            return "'" + text
+        return text
+
+    def _build_event_members_export_response(
+        self, event: Event, members: list[Member]
+    ) -> HttpResponse:
+        from openpyxl import Workbook
+
+        columns = [
+            "学号",
+            "姓名",
+            "性别",
+            "声部",
+            "梯队",
+            "院系",
+            "班级",
+            "手机号",
+            "微信号",
+            "邮箱",
+            "状态",
+            "入队年月",
+        ]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "活动队员"
+        ws.append(columns)
+
+        for member in members:
+            user = getattr(member, "user", None)
+            department = (
+                getattr(member, "department_other", "") or "其他"
+                if getattr(member, "department", "") == "其他"
+                else getattr(member, "department", "")
+            )
+            row = [
+                getattr(user, "user_id", ""),
+                getattr(member, "name", ""),
+                getattr(member, "gender", ""),
+                getattr(member, "voice_part", ""),
+                getattr(member, "tier", ""),
+                department,
+                getattr(member, "class_name", ""),
+                getattr(member, "phone_number", ""),
+                getattr(member, "wechat_id", ""),
+                getattr(member, "email", ""),
+                member.get_status_display(),
+                getattr(member, "join_month", ""),
+            ]
+            ws.append([self._safe_export_text(value) for value in row])
+            for cell in ws[ws.max_row]:
+                cell.number_format = "@"
+                cell.data_type = "s"
+
+        widths = [16, 12, 8, 8, 8, 24, 14, 16, 18, 28, 10, 12]
+        for index, width in enumerate(widths, start=1):
+            ws.column_dimensions[ws.cell(row=1, column=index).column_letter].width = (
+                width
+            )
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        filename = (
+            f"活动队员_{event.name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        )
+        encoded_filename = quote(filename, safe="")
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="event_members.xlsx"; '
+            f"filename*=UTF-8''{encoded_filename}"
+        )
+        return response
 
     def get_queryset(self):  # type: ignore[override]
         qs = super().get_queryset()
@@ -266,9 +392,9 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看签到列表", {}), status=403)
-        qs = event.checkin_sessions.all().order_by("-started_at", "-id")
-        data = EventCheckinSessionSerializer(qs, many=True).data
-        return Response({"results": data, "count": qs.count()})
+        sessions = list(event.checkin_sessions.all().order_by("-started_at", "-id"))
+        data = EventCheckinSessionSerializer(sessions, many=True).data
+        return Response({"results": data, "count": len(sessions)})
 
     @action(
         detail=True,
@@ -280,9 +406,21 @@ class EventViewSet(EnvelopeModelViewSet):
         event: Event = self.get_object()
         session = event.checkin_sessions.filter(is_active=True).first()
         data = None
+        has_checked_in = False
         if session:
             data = EventCheckinSessionSerializer(session).data
-        return Response({"active": bool(session), "session": data})
+            member = getattr(request.user, "member", None)
+            if member:
+                has_checked_in = EventCheckinRecord.objects.filter(
+                    session=session, member=member
+                ).exists()
+        return Response(
+            {
+                "active": bool(session),
+                "session": data,
+                "has_checked_in": has_checked_in,
+            }
+        )
 
     @action(
         detail=True,
@@ -469,30 +607,41 @@ class EventViewSet(EnvelopeModelViewSet):
     def checkin_records(self, request, public_id=None):
         event: Event = self.get_object()
         user = request.user
-        is_event_admin = (
-            getattr(user, "member", None)
-            and event.admins.filter(pk=user.member.id).exists()
-        )
+        member = getattr(user, "member", None)
+        is_event_admin = member and event.admins.filter(pk=member.id).exists()
         is_site_admin = getattr(user, "is_staff", False) or getattr(
             user, "role", ""
         ) in ("Admin", "SuperAdmin")
         session_id = request.query_params.get("session_id")
-        if not (is_event_admin or is_site_admin):
-            member = getattr(user, "member", None)
+        mine_only = str(request.query_params.get("mine", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if mine_only:
+            if not member:
+                return Response(
+                    envelope_error(403, "仅队员可查看签到记录", {}), status=403
+                )
+            qs = EventCheckinRecord.objects.filter(
+                session__event=event, member=member
+            ).select_related("member__user", "session")
+        elif not (is_event_admin or is_site_admin):
             if member and (
                 event.participants.filter(pk=member.id).exists()
                 or event.admins.filter(pk=member.id).exists()
             ):
                 qs = EventCheckinRecord.objects.filter(
                     session__event=event, member=member
-                ).select_related("member", "session")
+                ).select_related("member__user", "session")
             else:
                 return Response(
                     envelope_error(403, "无权限查看签到记录", {}), status=403
                 )
         else:
             qs = EventCheckinRecord.objects.filter(session__event=event).select_related(
-                "member", "session"
+                "member__user", "session"
             )
         if session_id:
             qs = qs.filter(session_id=session_id)
@@ -530,32 +679,55 @@ class EventViewSet(EnvelopeModelViewSet):
             session = event.checkin_sessions.get(pk=session_id)
         except EventCheckinSession.DoesNotExist:
             return Response(envelope_error(404, "签到实例不存在", {}), status=404)
-        checked_ids = set(
-            EventCheckinRecord.objects.filter(session=session).values_list(
-                "member_id", flat=True
-            )
-        )
-        # 活动成员包括管理员与参与人员
-        from apps.personnel.serializers import MemberSerializer
-
+        records_by_member_id = {
+            int(record.member_id): record
+            for record in EventCheckinRecord.objects.filter(
+                session=session
+            ).select_related("member__user")
+        }
         member_map = {
             int(member.id): member
-            for member in [
-                *event.participants.select_related("user").all(),
-                *event.admins.select_related("user").all(),
-            ]
+            for member in Member.objects.filter(
+                Q(events=event) | Q(managed_events=event)
+            )
+            .select_related("user")
+            .distinct()
         }
         members = sort_members(member_map.values())
-        checked_members = [m for m in members if m.id in checked_ids]
-        not_checked_members = [m for m in members if m.id not in checked_ids]
+        checked_members = []
+        not_checked_members = []
+        results = []
+        for member in members:
+            record = records_by_member_id.get(int(member.id))
+            if record:
+                checked_members.append(member)
+            else:
+                not_checked_members.append(member)
+            results.append(
+                {
+                    "id": getattr(record, "id", None),
+                    "session": int(session.id),
+                    "member": int(member.id),
+                    "member_public_id": getattr(member, "public_id", ""),
+                    "member_name": getattr(member, "name", ""),
+                    "member_user_id": getattr(
+                        getattr(member, "user", None), "user_id", ""
+                    ),
+                    "voice_part": getattr(member, "voice_part", ""),
+                    "tier": getattr(member, "tier", ""),
+                    "checked_at": getattr(record, "checked_at", None),
+                    "lat": getattr(record, "lat", None),
+                    "lng": getattr(record, "lng", None),
+                }
+            )
         return Response(
             {
-                "checked": MemberSerializer(
-                    checked_members, many=True, context={"request": request}
+                "checked": MemberBriefSerializer(checked_members, many=True).data,
+                "not_checked": MemberBriefSerializer(
+                    not_checked_members, many=True
                 ).data,
-                "not_checked": MemberSerializer(
-                    not_checked_members, many=True, context={"request": request}
-                ).data,
+                "results": results,
+                "count": len(results),
             }
         )
 
@@ -1385,6 +1557,23 @@ class EventViewSet(EnvelopeModelViewSet):
         detail=True,
         methods=["get"],
         permission_classes=[IsAuthenticated],
+        url_path="members/export",
+    )
+    def export_members(self, request, public_id=None):
+        """导出活动参与队员名单，限系统管理员和活动管理员。"""
+        event: Event = self.get_object()
+        user = request.user
+        if not (self._is_site_admin(user) or self._is_event_admin(event, user)):
+            return Response(envelope_error(403, "无权限导出成员列表", {}), status=403)
+
+        qs = self._filter_event_members(event, request.query_params)
+        members = sort_members(qs)
+        return self._build_event_members_export_response(event, members)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[IsAuthenticated],
         url_path="members",
     )
     def list_members(self, request, public_id=None):
@@ -1393,12 +1582,7 @@ class EventViewSet(EnvelopeModelViewSet):
 
         event: Event = self.get_object()
         user = request.user
-        is_site_admin = getattr(user, "is_staff", False) or getattr(
-            user, "role", ""
-        ) in (
-            "Admin",
-            "SuperAdmin",
-        )
+        is_site_admin = self._is_site_admin(user)
         member = getattr(user, "member", None)
         is_event_member = bool(
             member
@@ -1409,16 +1593,7 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看成员列表", {}), status=403)
-        qs = event.participants.select_related("user").all()
-        name = request.query_params.get("name")
-        user_id = request.query_params.get("user_id")
-        voice_part = request.query_params.get("voice_part")
-        if name:
-            qs = qs.filter(name__icontains=name)
-        if user_id:
-            qs = qs.filter(user__user_id__icontains=user_id)
-        if voice_part:
-            qs = qs.filter(voice_part=voice_part)
+        qs = self._filter_event_members(event, request.query_params)
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("page_size", 20))
         start = (page - 1) * page_size

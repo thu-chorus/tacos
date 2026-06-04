@@ -47,9 +47,13 @@
           </p>
         </div>
         <div class="share-detection-footer">
-          <button class="btn-modern ghost" @click="dismissShareDetection">忽略</button>
+          <button class="btn-modern ghost" @click="dismissShareDetection">
+            <i-lucide-x class="btn-icon" />
+            <span>忽略</span>
+          </button>
           <button class="btn-modern primary" @click="navigateToSharedUrl">
-            {{ shareDetection.isCheckinShare ? '前往签到' : '立即访问' }}
+            <i-lucide-navigation class="btn-icon" />
+            <span>{{ shareDetection.isCheckinShare ? '前往签到' : '立即访问' }}</span>
           </button>
         </div>
       </div>
@@ -96,13 +100,17 @@
           </p>
         </div>
         <div class="share-detection-footer">
-          <button class="btn-modern ghost" @click="closePasteDialog">取消</button>
+          <button class="btn-modern ghost" @click="closePasteDialog">
+            <i-lucide-x class="btn-icon" />
+            <span>取消</span>
+          </button>
           <button
             class="btn-modern primary"
             @click="confirmPasteNavigation"
             :disabled="!pasteDialog.parsed"
           >
-            前往
+            <i-lucide-navigation class="btn-icon" />
+            <span>前往</span>
           </button>
         </div>
       </div>

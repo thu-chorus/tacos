@@ -6,6 +6,41 @@ import 'vue-sonner/style.css'
 import './assets/styles/theme.css'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import {
+  ArrowLeft as LucideArrowLeft,
+  BadgeCheck as LucideBadgeCheck,
+  CalendarPlus as LucideCalendarPlus,
+  Check as LucideCheck,
+  ClipboardCheck as LucideClipboardCheck,
+  ClipboardList as LucideClipboardList,
+  Copy as LucideCopy,
+  Download as LucideDownload,
+  ExternalLink as LucideExternalLink,
+  Eye as LucideEye,
+  FileText as LucideFileText,
+  GraduationCap as LucideGraduationCap,
+  House as LucideHouse,
+  ImagePlus as LucideImagePlus,
+  KeyRound as LucideKeyRound,
+  Link as LucideLink,
+  ListChecks as LucideListChecks,
+  LogIn as LucideLogIn,
+  MapPin as LucideMapPin,
+  Navigation as LucideNavigation,
+  Pencil as LucidePencil,
+  Plus as LucidePlus,
+  RotateCcw as LucideRotateCcw,
+  Save as LucideSave,
+  Search as LucideSearch,
+  Send as LucideSend,
+  Settings as LucideSettings,
+  Share2 as LucideShare2,
+  ShieldCheck as LucideShieldCheck,
+  Trash2 as LucideTrash2,
+  Upload as LucideUpload,
+  UserPlus as LucideUserPlus,
+  X as LucideX
+} from 'lucide-vue-next'
 
 // 路由与状态管理
 import router from './router'
@@ -24,6 +59,46 @@ const app = createApp(App)
 app.use(router)
 app.use(store)
 app.use(ElementPlus)
+
+const globalIcons = {
+  'i-lucide-arrow-left': LucideArrowLeft,
+  'i-lucide-badge-check': LucideBadgeCheck,
+  'i-lucide-calendar-plus': LucideCalendarPlus,
+  'i-lucide-check': LucideCheck,
+  'i-lucide-clipboard-check': LucideClipboardCheck,
+  'i-lucide-clipboard-list': LucideClipboardList,
+  'i-lucide-copy': LucideCopy,
+  'i-lucide-download': LucideDownload,
+  'i-lucide-external-link': LucideExternalLink,
+  'i-lucide-eye': LucideEye,
+  'i-lucide-file-text': LucideFileText,
+  'i-lucide-graduation-cap': LucideGraduationCap,
+  'i-lucide-house': LucideHouse,
+  'i-lucide-image-plus': LucideImagePlus,
+  'i-lucide-key-round': LucideKeyRound,
+  'i-lucide-link': LucideLink,
+  'i-lucide-list-checks': LucideListChecks,
+  'i-lucide-log-in': LucideLogIn,
+  'i-lucide-map-pin': LucideMapPin,
+  'i-lucide-navigation': LucideNavigation,
+  'i-lucide-pencil': LucidePencil,
+  'i-lucide-plus': LucidePlus,
+  'i-lucide-rotate-ccw': LucideRotateCcw,
+  'i-lucide-save': LucideSave,
+  'i-lucide-search': LucideSearch,
+  'i-lucide-send': LucideSend,
+  'i-lucide-settings': LucideSettings,
+  'i-lucide-share-2': LucideShare2,
+  'i-lucide-shield-check': LucideShieldCheck,
+  'i-lucide-trash-2': LucideTrash2,
+  'i-lucide-upload': LucideUpload,
+  'i-lucide-user-plus': LucideUserPlus,
+  'i-lucide-x': LucideX
+}
+
+Object.entries(globalIcons).forEach(([name, component]) => {
+  app.component(name, component)
+})
 
 // 在挂载前同步校验登录状态，确保刷新后角色可用
 // 不阻塞首屏过久：无论成功与否都继续挂载
