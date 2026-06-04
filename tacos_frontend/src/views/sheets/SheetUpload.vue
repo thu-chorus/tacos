@@ -94,9 +94,9 @@
               <i-lucide-upload class="btn-icon" />
               <span>提交</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="reset">
-              <i-lucide-rotate-ccw class="btn-icon" />
-              <span>重置</span>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
             </button>
           </div>
 
@@ -209,21 +209,6 @@ export default {
       }
     }
 
-    const reset = () => {
-      file.value = null
-      form.title = ''
-      form.lyricist = ''
-      form.composer = ''
-      form.arranger = ''
-      form.introduction = ''
-      form.is_restricted = false
-      form.visible_to_all = true
-      form.visible_to_alumni = false
-      form.visible_event_ids = []
-      form.visible_member_ids = []
-      progress.value = 0
-    }
-
     onMounted(async () => {
       const [eventsResult, membersResult] = await Promise.allSettled([
         getEventList({ page_size: 1000 }),
@@ -248,7 +233,6 @@ export default {
       beforeUpload,
       doNothing,
       submit,
-      reset,
       events,
       members
     }
