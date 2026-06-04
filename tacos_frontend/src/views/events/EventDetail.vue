@@ -23,9 +23,13 @@
             </div>
           </div>
           <div class="actions">
-            <button v-if="canEdit" class="btn-modern warning sm-btn" @click="goEdit">编辑</button>
+            <button v-if="canEdit" class="btn-modern warning sm-btn" @click="goEdit">
+              <i-lucide-pencil class="btn-icon" />
+              <span>编辑</span>
+            </button>
             <button v-if="canJoin" class="btn-modern success sm-btn" @click="doJoin">
-              报名参加
+              <i-lucide-check class="btn-icon" />
+              <span>报名参加</span>
             </button>
           </div>
         </div>
@@ -59,7 +63,10 @@
         <div class="alert-title">有签到进行中</div>
         <div class="alert-desc">您还未完成当前签到，请尽快签到。</div>
         <div class="alert-actions">
-          <button class="btn-modern warning sm-btn" @click="openCheckinDialog">立即签到</button>
+          <button class="btn-modern warning sm-btn" @click="openCheckinDialog">
+            <i-lucide-clipboard-check class="btn-icon" />
+            <span>立即签到</span>
+          </button>
         </div>
       </div>
       <div
@@ -70,7 +77,10 @@
         <div class="alert-title">有未提交的作业</div>
         <div class="alert-desc">当前共有 {{ pendingAssignmentsCount }} 个进行中的作业未提交。</div>
         <div class="alert-actions">
-          <button class="btn-modern primary sm-btn" @click="openAssignmentList">查看作业</button>
+          <button class="btn-modern primary sm-btn" @click="openAssignmentList">
+            <i-lucide-list-checks class="btn-icon" />
+            <span>查看作业</span>
+          </button>
         </div>
       </div>
     </div>
@@ -210,7 +220,8 @@
           </el-form-item>
           <el-form-item>
             <button class="btn-modern ghost sm-btn" @click="fillCurrentLocation">
-              使用当前定位填充
+              <i-lucide-map-pin class="btn-icon" />
+              <span>使用当前定位填充</span>
             </button>
           </el-form-item>
         </template>
@@ -221,9 +232,13 @@
           @click="startDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
-        <button class="btn-modern primary sm-btn" @click="doStartCheckin">创建</button>
+        <button class="btn-modern primary sm-btn" @click="doStartCheckin">
+          <i-lucide-plus class="btn-icon" />
+          <span>创建</span>
+        </button>
       </template>
     </el-dialog>
 
@@ -237,7 +252,10 @@
       </div>
       <div v-else-if="checkin.session?.type === 'LOCATION'" style="margin-bottom: 10px">
         <p>需要授权定位以完成签到</p>
-        <button class="btn-modern primary sm-btn" @click="getLocation">获取当前位置</button>
+        <button class="btn-modern primary sm-btn" @click="getLocation">
+          <i-lucide-map-pin class="btn-icon" />
+          <span>获取当前位置</span>
+        </button>
         <div v-if="submitDialog.lat && submitDialog.lng" style="margin-top: 8px">
           坐标：{{ submitDialog.lat }}, {{ submitDialog.lng }}
         </div>
@@ -251,9 +269,13 @@
           @click="submitDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
-        <button class="btn-modern primary sm-btn" @click="doSubmitCheckin">提交</button>
+        <button class="btn-modern primary sm-btn" @click="doSubmitCheckin">
+          <i-lucide-check class="btn-icon" />
+          <span>提交</span>
+        </button>
       </template>
     </el-dialog>
 
@@ -262,7 +284,10 @@
       <div v-loading="dialogs.checkins.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern primary sm-btn" @click="openStartCheckin">创建签到</button>
+          <button class="btn-modern primary sm-btn" @click="openStartCheckin">
+            <i-lucide-plus class="btn-icon" />
+            <span>创建签到</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -270,7 +295,7 @@
               <tr>
                 <th style="min-width: 100px">签到</th>
                 <th style="min-width: 80px">状态</th>
-                <th style="min-width: 95px">类型</th>
+                <th style="min-width: 130px">类型</th>
                 <th style="min-width: 160px">开始时间</th>
                 <th style="min-width: 160px">结束时间</th>
                 <th class="sticky-right" style="max-width: 175px; min-width: 150px">操作</th>
@@ -302,14 +327,16 @@
                       v-if="canEdit && !row.is_active"
                       @click="doBeginCheckin(row.id)"
                     >
-                      开始
+                      <i-lucide-check class="btn-icon" />
+                      <span>开始</span>
                     </button>
                     <button
                       class="btn-modern danger xsm-btn"
                       v-if="canEdit && row.is_active"
                       @click="doStopCheckin"
                     >
-                      结束
+                      <i-lucide-x class="btn-icon" />
+                      <span>结束</span>
                     </button>
                     <button
                       class="btn-modern primary xsm-btn"
@@ -321,21 +348,23 @@
                       "
                       @click="openCheckinDialog"
                     >
-                      立即签到
+                      <i-lucide-clipboard-check class="btn-icon" />
+                      <span>立即签到</span>
                     </button>
                     <button
                       class="btn-modern warning xsm-btn"
                       v-if="canEdit"
                       @click="goSessionManage(row.id)"
                     >
-                      管理
+                      <i-lucide-settings class="btn-icon" />
+                      <span>管理</span>
                     </button>
                     <button
                       class="btn-modern ghost xsm-btn share-checkin-btn"
                       @click="handleShareCheckin(row)"
                       title="分享此签到"
                     >
-                      <i-lucide-share style="width: 14px; height: 14px" />
+                      <i-lucide-share class="btn-icon" />
                     </button>
                   </div>
                 </td>
@@ -359,7 +388,10 @@
       <div v-loading="dialogs.admins.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -410,7 +442,10 @@
       <div v-loading="dialogs.members.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -461,7 +496,10 @@
       <div v-loading="dialogs.assignments.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern primary sm-btn" @click="openCreateAssignment">发布作业</button>
+          <button class="btn-modern primary sm-btn" @click="openCreateAssignment">
+            <i-lucide-plus class="btn-icon" />
+            <span>发布作业</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -515,21 +553,24 @@
                       class="btn-modern primary xsm-btn"
                       @click="goAssignment(row)"
                     >
-                      查看内容
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看内容</span>
                     </button>
                     <button
                       v-if="canEdit"
                       class="btn-modern primary xsm-btn"
                       @click="goAssignment(row)"
                     >
-                      查看
+                      <i-lucide-eye class="btn-icon" />
+                      <span>查看</span>
                     </button>
                     <button
                       v-if="canEdit"
                       class="btn-modern warning xsm-btn"
                       @click="goAssignmentManage(row)"
                     >
-                      管理
+                      <i-lucide-settings class="btn-icon" />
+                      <span>管理</span>
                     </button>
                   </div>
                 </td>
@@ -553,7 +594,10 @@
       <div v-loading="dialogs.sheets.loading">
         <div class="row-actions" v-if="canEdit" style="gap: 6px; align-items: center">
           <h4 style="margin-left: 10px">管理员选项：</h4>
-          <button class="btn-modern warning sm-btn" @click="goEdit">编辑相关信息</button>
+          <button class="btn-modern warning sm-btn" @click="goEdit">
+            <i-lucide-pencil class="btn-icon" />
+            <span>编辑相关信息</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -583,8 +627,14 @@
                 </td>
                 <td class="sticky-right">
                   <div class="row-actions">
-                    <button class="btn-modern ghost xsm-btn" @click="goSheet(row)">详情</button>
-                    <button class="btn-modern primary xsm-btn" @click="download(row)">下载</button>
+                    <button class="btn-modern ghost xsm-btn" @click="goSheet(row)">
+                      <i-lucide-eye class="btn-icon" />
+                      <span>详情</span>
+                    </button>
+                    <button class="btn-modern primary xsm-btn" @click="download(row)">
+                      <i-lucide-download class="btn-icon" />
+                      <span>下载</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -637,7 +687,10 @@
             :auto-upload="false"
             multiple
           >
-            <button class="btn-modern ghost sm-btn" type="button">选择文件</button>
+            <button class="btn-modern ghost sm-btn" type="button">
+              <i-lucide-upload class="btn-icon" />
+              <span>选择文件</span>
+            </button>
           </el-upload>
         </el-form-item>
       </el-form>
@@ -647,10 +700,12 @@
           @click="createDialog.visible = false"
           style="margin-right: 10px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
         <button class="btn-modern primary sm-btn" :loading="creating" @click="doCreateAssignment">
-          发布
+          <i-lucide-send class="btn-icon" />
+          <span>发布</span>
         </button>
       </template>
     </el-dialog>
@@ -1761,23 +1816,30 @@ export default {
 }
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
 .data-table thead th.sticky-right {
   position: sticky;
@@ -1793,6 +1855,9 @@ export default {
   background: #fff;
   border-left: 1px solid var(--border);
 }
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
+}
 .empty-cell {
   text-align: center;
   color: #9ca3af;
@@ -1800,6 +1865,8 @@ export default {
 }
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 .share-checkin-btn {

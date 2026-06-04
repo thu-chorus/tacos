@@ -96,7 +96,10 @@
                   accept="image/png,image/jpeg,image/gif"
                   :on-change="onAnnImageChange"
                 >
-                  <button type="button" class="btn-modern primary xsm-btn">上传图片</button>
+                  <button type="button" class="btn-modern primary xsm-btn">
+                    <i-lucide-image-plus class="btn-icon" />
+                    <span>上传图片</span>
+                  </button>
                 </el-upload>
               </div>
             </div>
@@ -178,7 +181,8 @@
                 :loading="importingTier === 'SECOND'"
                 @click="importSecondTier"
               >
-                一键导入二队成员
+                <i-lucide-user-plus class="btn-icon" />
+                <span>一键导入二队成员</span>
               </button>
               <button
                 class="btn-modern ghost sm-btn"
@@ -186,7 +190,8 @@
                 :loading="importingTier === 'FIRST'"
                 @click="importFirstTier"
               >
-                一键导入一队成员
+                <i-lucide-user-plus class="btn-icon" />
+                <span>一键导入一队成员</span>
               </button>
             </div>
           </el-form-item>
@@ -201,12 +206,18 @@
               @click="onSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '保存' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-calendar-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '保存' : '创建' }}</span>
             </button>
             <button v-if="isEdit" class="btn-modern danger" type="button" @click="deleteEvent">
-              删除活动
+              <i-lucide-trash-2 class="btn-icon" />
+              <span>删除活动</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>

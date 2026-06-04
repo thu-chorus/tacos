@@ -350,7 +350,8 @@
               @click="handleSubmit"
               :disabled="submitting"
             >
-              {{ submitting ? '提交中...' : '完成设置并进入系统' }}
+              <i-lucide-check class="btn-icon" />
+              <span>{{ submitting ? '提交中...' : '完成设置并进入系统' }}</span>
             </button>
           </div>
         </el-form>

@@ -11,7 +11,7 @@
         <el-form v-else ref="formRef" :model="formData" :rules="formRules" label-width="80px">
           <el-row :gutter="24">
             <el-col :span="12" :xs="24">
-              <el-form-item label="教师ID" prop="instructor_id">
+              <el-form-item label="身份证号" prop="instructor_id">
                 <el-input v-model="formData.instructor_id" :disabled="isEdit" />
               </el-form-item>
             </el-col>
@@ -79,9 +79,14 @@
               @click="handleSubmit"
               :disabled="submitting"
             >
-              {{ isEdit ? '更新' : '创建' }}
+              <i-lucide-save v-if="isEdit" class="btn-icon" />
+              <i-lucide-plus v-else class="btn-icon" />
+              <span>{{ isEdit ? '更新' : '创建' }}</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>
@@ -128,7 +133,7 @@ export default {
 
     const formRules = {
       instructor_id: [
-        { required: true, message: '请输入教师ID（工号或身份证号）', trigger: 'blur' },
+        { required: true, message: '请输入身份证号', trigger: 'blur' },
         {
           pattern: /^(\d{10}|\d{17}[\dXx])$/,
           message: '请输入10位工号或18位身份证号',

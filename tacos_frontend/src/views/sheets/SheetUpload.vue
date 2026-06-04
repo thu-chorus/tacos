@@ -91,9 +91,13 @@
             style="margin-top: 12px; display: flex; gap: 8px; justify-content: right"
           >
             <button class="btn-modern primary" type="button" @click="submit" :disabled="submitting">
-              提交
+              <i-lucide-upload class="btn-icon" />
+              <span>提交</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="reset">重置</button>
+            <button class="btn-modern ghost" type="button" @click="reset">
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>重置</span>
+            </button>
           </div>
 
           <el-progress v-if="submitting" :percentage="progress" style="max-width: 420px" />

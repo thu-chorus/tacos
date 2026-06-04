@@ -23,8 +23,14 @@
             </div>
           </div>
           <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="openEditDialog">编辑</button>
-            <button class="btn-modern danger sm-btn" @click="openDeleteDialog">删除</button>
+            <button class="btn-modern primary sm-btn" @click="openEditDialog">
+              <i-lucide-pencil class="btn-icon" />
+              <span>编辑</span>
+            </button>
+            <button class="btn-modern danger sm-btn" @click="openDeleteDialog">
+              <i-lucide-trash-2 class="btn-icon" />
+              <span>删除</span>
+            </button>
           </div>
         </div>
       </div>
@@ -46,7 +52,10 @@
         <div class="header" style="margin-bottom: 10px">
           <h3>拥有该称号的队员</h3>
           <div class="actions">
-            <button class="btn-modern primary sm-btn" @click="openGrantDialog">授予称号</button>
+            <button class="btn-modern primary sm-btn" @click="openGrantDialog">
+              <i-lucide-badge-check class="btn-icon" />
+              <span>授予称号</span>
+            </button>
           </div>
         </div>
 
@@ -99,7 +108,8 @@
                 <td class="sticky-right">
                   <div class="row-actions">
                     <button class="btn-modern danger xsm-btn" @click="handleRemove(row)">
-                      移除
+                      <i-lucide-trash-2 class="btn-icon" />
+                      <span>移除</span>
                     </button>
                   </div>
                 </td>
@@ -155,10 +165,12 @@
           @click="editDialog.visible = false"
           style="margin-right: 8px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
         <button class="btn-modern primary sm-btn" :disabled="saving" @click="handleSaveEdit">
-          {{ saving ? '保存中...' : '保存' }}
+          <i-lucide-save class="btn-icon" />
+          <span>{{ saving ? '保存中...' : '保存' }}</span>
         </button>
       </template>
     </el-dialog>
@@ -223,10 +235,12 @@
           @click="grantDialog.visible = false"
           style="margin-right: 8px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
         <button class="btn-modern primary sm-btn" :disabled="granting" @click="handleConfirmGrant">
-          {{ granting ? '授予中...' : '确认授予' }}
+          <i-lucide-badge-check class="btn-icon" />
+          <span>{{ granting ? '授予中...' : '确认授予' }}</span>
         </button>
       </template>
     </el-dialog>
@@ -841,6 +855,8 @@ export default {
 
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -869,26 +885,33 @@ export default {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
 
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
 }
 
 .data-table thead th.sticky-right {
@@ -905,6 +928,10 @@ export default {
   z-index: 1;
   background: #fff;
   border-left: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
 }
 
 @media (max-width: 768px) {

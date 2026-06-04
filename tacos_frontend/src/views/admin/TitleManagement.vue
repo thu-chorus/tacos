@@ -17,9 +17,13 @@
           <h3>称号列表</h3>
           <div class="actions">
             <button class="btn-modern warning sm-btn" @click="handleUpdateBirthdayTitles">
-              更新本月寿星
+              <i-lucide-rotate-ccw class="btn-icon" />
+              <span>更新本月寿星</span>
             </button>
-            <button class="btn-modern primary sm-btn" @click="openCreate">新建称号</button>
+            <button class="btn-modern primary sm-btn" @click="openCreate">
+              <i-lucide-plus class="btn-icon" />
+              <span>新建称号</span>
+            </button>
           </div>
         </div>
 
@@ -29,12 +33,18 @@
             <span class="loading-text">加载中...</span>
           </div>
           <table class="data-table" v-else>
+            <colgroup>
+              <col class="table-col-name" />
+              <col class="table-col-appearance" />
+              <col class="table-col-count" />
+              <col class="table-col-action" />
+            </colgroup>
             <thead>
               <tr>
-                <th style="min-width: 140px">名称</th>
-                <th style="min-width: 180px">外观</th>
-                <th style="min-width: 100px">拥有人数</th>
-                <th class="sticky-right" style="min-width: 80px">操作</th>
+                <th class="name-col">名称</th>
+                <th class="appearance-col">外观</th>
+                <th class="center-col">拥有人数</th>
+                <th class="sticky-right action-col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -42,14 +52,17 @@
                 <td colspan="4" class="empty-cell">暂无数据</td>
               </tr>
               <tr v-for="row in tableData" :key="row.id">
-                <td>{{ row.name }}</td>
-                <td>
+                <td class="name-col">{{ row.name }}</td>
+                <td class="appearance-col">
                   <TitleBadge :title="row" />
                 </td>
-                <td>{{ row.owners_count }}</td>
-                <td class="sticky-right">
+                <td class="center-col">{{ row.owners_count }}</td>
+                <td class="sticky-right action-col">
                   <div class="row-actions">
-                    <button class="btn-modern warning xsm-btn" @click="goDetail(row)">管理</button>
+                    <button class="btn-modern warning xsm-btn" @click="goDetail(row)">
+                      <i-lucide-settings class="btn-icon" />
+                      <span>管理</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -108,10 +121,12 @@
           @click="editing.visible = false"
           style="margin-right: 8px"
         >
-          取消
+          <i-lucide-x class="btn-icon" />
+          <span>取消</span>
         </button>
         <button class="btn-modern primary sm-btn" :disabled="savingTitle" @click="saveTitle">
-          {{ savingTitle ? '保存中...' : '保存' }}
+          <i-lucide-save class="btn-icon" />
+          <span>{{ savingTitle ? '保存中...' : '保存' }}</span>
         </button>
       </template>
     </el-dialog>
@@ -381,6 +396,8 @@ export default {
 
 .row-actions {
   display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -409,26 +426,69 @@ export default {
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 720px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table .table-col-name {
+  width: 180px;
+}
+
+.data-table .table-col-appearance {
+  width: 300px;
+}
+
+.data-table .table-col-count {
+  width: 120px;
+}
+
+.data-table .table-col-action {
+  width: 120px;
 }
 
 .data-table thead th {
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  padding: 10px 12px;
+  color: #4b5563;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--background);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .data-table tbody td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  color: #374151;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  transition: background-color 0.15s ease;
 }
 
-.data-table tbody tr:hover {
-  background: var(--muted);
+.data-table tbody tr:hover td {
+  background: #f9fafb;
+}
+
+.data-table .center-col {
+  text-align: center;
+}
+
+.data-table .name-col,
+.data-table .appearance-col {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.data-table .action-col {
+  text-align: center;
+}
+
+.data-table .action-col .row-actions {
+  justify-content: center;
 }
 
 .data-table thead th.sticky-right {
@@ -445,5 +505,9 @@ export default {
   z-index: 1;
   background: #fff;
   border-left: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover td.sticky-right {
+  background: #f9fafb;
 }
 </style>

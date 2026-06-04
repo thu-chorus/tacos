@@ -70,7 +70,8 @@
             <h3>队员信息</h3>
             <div class="actions">
               <button v-if="isAdmin" class="btn-modern primary sm-btn" @click="handleEdit">
-                编辑
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑</span>
               </button>
             </div>
           </div>

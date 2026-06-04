@@ -77,7 +77,8 @@
             style="margin-top: 12px; display: flex; gap: 8px; justify-content: right"
           >
             <button class="btn-modern primary" type="button" @click="submit" :disabled="submitting">
-              保存
+              <i-lucide-save class="btn-icon" />
+              <span>保存</span>
             </button>
             <button
               v-if="isAdmin"
@@ -86,9 +87,13 @@
               :disabled="deleting || submitting"
               @click="handleDelete"
             >
-              删除
+              <i-lucide-trash-2 class="btn-icon" />
+              <span>删除</span>
             </button>
-            <button class="btn-modern ghost" type="button" @click="goBack">取消</button>
+            <button class="btn-modern ghost" type="button" @click="goBack">
+              <i-lucide-x class="btn-icon" />
+              <span>取消</span>
+            </button>
           </div>
         </el-form>
       </div>

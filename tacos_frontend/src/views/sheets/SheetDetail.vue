@@ -12,7 +12,10 @@
           <div class="header" style="margin-bottom: 20px">
             <h3>{{ sheet?.title || '乐谱详情' }}</h3>
             <div class="actions">
-              <button v-if="isAdmin" class="btn-modern warning sm-btn" @click="edit">编辑</button>
+              <button v-if="isAdmin" class="btn-modern warning sm-btn" @click="edit">
+                <i-lucide-pencil class="btn-icon" />
+                <span>编辑</span>
+              </button>
             </div>
           </div>
 
@@ -91,7 +94,10 @@
           <div class="header" style="margin-bottom: 10px">
             <h3>PDF 预览</h3>
             <div class="actions">
-              <button class="btn-modern primary sm-btn" @click="download">下载</button>
+              <button class="btn-modern primary sm-btn" @click="download">
+                <i-lucide-download class="btn-icon" />
+                <span>下载</span>
+              </button>
             </div>
           </div>
           <div class="preview-section">
