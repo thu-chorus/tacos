@@ -1,8 +1,6 @@
 # AGENTS.md
 
 This file gives Codex and other agentic tools the repo-specific rules for TaCOS.
-It is based on `.cursorrules`; when the two conflict, follow this file for agent
-workflow and `.cursorrules` for unchanged product/domain details.
 
 ## Project Overview
 
@@ -180,3 +178,5 @@ black .
 - Run relevant tests before opening a PR. If a test cannot run, state why in the
   PR notes.
 - PRs should mention behavior changes, tests run, and docs updated.
+- Keep PR reviewer notes simple, brief, and focused on what reviewers need to
+  know.
