@@ -409,16 +409,12 @@ export default {
 
     // 监听 URL 状态变化重新加载数据
     let isFirstLoad = true
-    watch(
-      () => [urlState.value.title, urlState.value.composer],
-      () => {
-        if (!isFirstLoad) {
-          urlState.value = { ...urlState.value, page: 1 }
-          loadData()
-        }
-      },
-      { deep: true }
-    )
+    watch([() => urlState.value.title, () => urlState.value.composer], () => {
+      if (!isFirstLoad) {
+        urlState.value = { ...urlState.value, page: 1 }
+        loadData()
+      }
+    })
 
     // 初始加载
     watch(

@@ -626,18 +626,17 @@ export default {
     // 监听 URL 状态变化重新加载数据
     let isFirstLoad = true
     watch(
-      () => [
-        urlState.value.keyword,
-        urlState.value.scope,
-        urlState.value.dateStart,
-        urlState.value.dateEnd
+      [
+        () => urlState.value.keyword,
+        () => urlState.value.scope,
+        () => urlState.value.dateStart,
+        () => urlState.value.dateEnd
       ],
       () => {
         if (!isFirstLoad) {
           loadData()
         }
-      },
-      { deep: true }
+      }
     )
 
     // 初始加载
