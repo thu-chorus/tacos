@@ -446,6 +446,14 @@
             <i-lucide-pencil class="btn-icon" />
             <span>编辑相关信息</span>
           </button>
+          <button
+            class="btn-modern success sm-btn"
+            @click="handleExportMembers"
+            :disabled="membersExporting"
+          >
+            <i-lucide-download class="btn-icon" />
+            <span>{{ membersExporting ? '导出中...' : '导出队员' }}</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -734,11 +742,13 @@ import {
   uploadAssignmentAttachment,
   getEventSheets,
   getEventAdmins,
-  getEventMembers
+  getEventMembers,
+  exportEventMembers
 } from '@/api/events'
 import { getProfile } from '@/api/auth'
 import { initiateDownload, getDownloadTask } from '@/api/sheets'
 import { formatDate, formatDateTime } from '@/utils/format'
+import { downloadFile, getFilenameFromContentDisposition } from '@/utils/download'
 import { notify } from '@/utils/notify'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -778,6 +788,7 @@ export default {
     const event = ref({})
     const checkin = ref({ active: false, session: null })
     const pendingAssignmentsCount = ref(0)
+    const membersExporting = ref(false)
     let detailRequestSeq = 0
     const dialogs = ref({
       checkins: { visible: false, loading: false, items: [] },
@@ -1061,6 +1072,25 @@ export default {
         paginations.value.members.page = 1
       } finally {
         dialogs.value.members.loading = false
+      }
+    }
+
+    const handleExportMembers = async () => {
+      membersExporting.value = true
+      notify.info('正在导出活动队员，请稍候...')
+      try {
+        const resp = await exportEventMembers(currentId.value)
+        let filename = getFilenameFromContentDisposition(resp.headers?.['content-disposition'])
+        if (!filename || filename === 'download') {
+          filename = `活动队员_${event.value?.name || currentId.value}.xlsx`
+        }
+        downloadFile(resp.data, filename)
+        notify.success('导出成功')
+      } catch (error) {
+        notify.error('导出失败')
+        console.error('导出活动队员失败', error)
+      } finally {
+        membersExporting.value = false
       }
     }
 
@@ -1592,6 +1622,7 @@ export default {
       handlePageSize,
       handleCurrentPage,
       isAdmin,
+      membersExporting,
       formatDate,
       formatDateTime,
       canEdit,
@@ -1609,6 +1640,7 @@ export default {
       openSheetList,
       openAdminList,
       openMemberList,
+      handleExportMembers,
       openStartCheckin,
       doStartCheckin,
       doStopCheckin,

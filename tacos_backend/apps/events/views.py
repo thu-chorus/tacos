@@ -4,6 +4,7 @@ import logging
 import os
 from io import BytesIO
 from typing import Any
+from urllib.parse import quote
 
 from django.db.models import Prefetch, Q
 from django.http import FileResponse, HttpResponse
@@ -76,6 +77,114 @@ class EventViewSet(EnvelopeModelViewSet):
         "end_date": ["exact", "lte", "gte"],
     }
     search_fields = ["name"]
+
+    @staticmethod
+    def _is_site_admin(user) -> bool:
+        return getattr(user, "is_staff", False) or getattr(user, "role", "") in (
+            "Admin",
+            "SuperAdmin",
+        )
+
+    @staticmethod
+    def _is_event_admin(event: Event, user) -> bool:
+        member = getattr(user, "member", None)
+        return bool(member and event.admins.filter(pk=member.id).exists())
+
+    @staticmethod
+    def _filter_event_members(event: Event, params) -> Any:
+        qs = event.participants.select_related("user").all()
+        name = params.get("name")
+        user_id = params.get("user_id")
+        voice_part = params.get("voice_part")
+        if name:
+            qs = qs.filter(name__icontains=name)
+        if user_id:
+            qs = qs.filter(user__user_id__icontains=user_id)
+        if voice_part:
+            qs = qs.filter(voice_part=voice_part)
+        return qs
+
+    @staticmethod
+    def _safe_export_text(value: Any) -> str:
+        """转为 Excel 安全文本，避免长数字丢失格式或公式注入。"""
+        text = "" if value is None else str(value)
+        stripped = text.lstrip("\t ")
+        if stripped[:1] in {"=", "+", "-", "@"} or text[:1] == "\t":
+            return "'" + text
+        return text
+
+    def _build_event_members_export_response(
+        self, event: Event, members: list[Member]
+    ) -> HttpResponse:
+        from openpyxl import Workbook
+
+        columns = [
+            "学号",
+            "姓名",
+            "性别",
+            "声部",
+            "梯队",
+            "院系",
+            "班级",
+            "手机号",
+            "微信号",
+            "邮箱",
+            "状态",
+            "入队年月",
+        ]
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "活动队员"
+        ws.append(columns)
+
+        for member in members:
+            user = getattr(member, "user", None)
+            department = (
+                getattr(member, "department_other", "") or "其他"
+                if getattr(member, "department", "") == "其他"
+                else getattr(member, "department", "")
+            )
+            row = [
+                getattr(user, "user_id", ""),
+                getattr(member, "name", ""),
+                getattr(member, "gender", ""),
+                getattr(member, "voice_part", ""),
+                getattr(member, "tier", ""),
+                department,
+                getattr(member, "class_name", ""),
+                getattr(member, "phone_number", ""),
+                getattr(member, "wechat_id", ""),
+                getattr(member, "email", ""),
+                member.get_status_display(),
+                getattr(member, "join_month", ""),
+            ]
+            ws.append([self._safe_export_text(value) for value in row])
+            for cell in ws[ws.max_row]:
+                cell.number_format = "@"
+                cell.data_type = "s"
+
+        widths = [16, 12, 8, 8, 8, 24, 14, 16, 18, 28, 10, 12]
+        for index, width in enumerate(widths, start=1):
+            ws.column_dimensions[ws.cell(row=1, column=index).column_letter].width = (
+                width
+            )
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        filename = (
+            f"活动队员_{event.name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        )
+        encoded_filename = quote(filename, safe="")
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="event_members.xlsx"; '
+            f"filename*=UTF-8''{encoded_filename}"
+        )
+        return response
 
     def get_queryset(self):  # type: ignore[override]
         qs = super().get_queryset()
@@ -1448,6 +1557,23 @@ class EventViewSet(EnvelopeModelViewSet):
         detail=True,
         methods=["get"],
         permission_classes=[IsAuthenticated],
+        url_path="members/export",
+    )
+    def export_members(self, request, public_id=None):
+        """导出活动参与队员名单，限系统管理员和活动管理员。"""
+        event: Event = self.get_object()
+        user = request.user
+        if not (self._is_site_admin(user) or self._is_event_admin(event, user)):
+            return Response(envelope_error(403, "无权限导出成员列表", {}), status=403)
+
+        qs = self._filter_event_members(event, request.query_params)
+        members = sort_members(qs)
+        return self._build_event_members_export_response(event, members)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[IsAuthenticated],
         url_path="members",
     )
     def list_members(self, request, public_id=None):
@@ -1456,12 +1582,7 @@ class EventViewSet(EnvelopeModelViewSet):
 
         event: Event = self.get_object()
         user = request.user
-        is_site_admin = getattr(user, "is_staff", False) or getattr(
-            user, "role", ""
-        ) in (
-            "Admin",
-            "SuperAdmin",
-        )
+        is_site_admin = self._is_site_admin(user)
         member = getattr(user, "member", None)
         is_event_member = bool(
             member
@@ -1472,16 +1593,7 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         if not (is_site_admin or is_event_member):
             return Response(envelope_error(403, "无权限查看成员列表", {}), status=403)
-        qs = event.participants.select_related("user").all()
-        name = request.query_params.get("name")
-        user_id = request.query_params.get("user_id")
-        voice_part = request.query_params.get("voice_part")
-        if name:
-            qs = qs.filter(name__icontains=name)
-        if user_id:
-            qs = qs.filter(user__user_id__icontains=user_id)
-        if voice_part:
-            qs = qs.filter(voice_part=voice_part)
+        qs = self._filter_event_members(event, request.query_params)
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("page_size", 20))
         start = (page - 1) * page_size

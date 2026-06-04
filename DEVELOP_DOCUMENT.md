@@ -695,6 +695,7 @@ override: true  # 可选，覆盖已有信息
 | PUT | `/{public_id}/` | 更新活动 | Admin |
 | DELETE | `/{public_id}/` | 删除活动 | Admin |
 | POST | `/{public_id}/join/` | 报名活动 | Auth |
+| GET | `/{public_id}/members/export/` | 导出活动参与队员名单（.xlsx） | Admin/EventAdmin |
 
 **GET 返回字段（列表/详情）仅包含基础信息与关系标识：**
 - `id, name, introduction, announcement, start_date, end_date, visibility, visible_to_alumni, created_at, updated_at`
@@ -708,6 +709,7 @@ override: true  # 可选，覆盖已有信息
 说明：作业、关联乐谱与签到等详细数据不再嵌入活动详情，请通过以下专属端点获取：
 - 作业：`/api/v1/events/{public_id}/assignments/` 及其子端点
 - 乐谱：`/api/v1/events/{public_id}/sheets`
+- 队员：`/api/v1/events/{public_id}/members/`，导出使用 `/api/v1/events/{public_id}/members/export/`
 - 签到：`/api/v1/events/{public_id}/checkin/...`
 
 **公告图片**:
