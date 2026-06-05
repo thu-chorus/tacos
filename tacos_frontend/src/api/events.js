@@ -262,6 +262,10 @@ export function exportEventMembers(eventId, params = {}) {
   return request.get(`/events/${eventId}/members/export/`, params, { responseType: 'blob' })
 }
 
+export function exportEventCheckins(eventId) {
+  return request.get(`/events/${eventId}/checkin/export/`, {}, { responseType: 'blob' })
+}
+
 export function uploadEventAnnouncementImage(eventId, file, onProgress) {
   const form = new FormData()
   form.append('image', file)

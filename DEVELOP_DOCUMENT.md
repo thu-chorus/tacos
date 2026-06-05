@@ -731,6 +731,7 @@ override: true  # 可选，覆盖已有信息
 | POST | `/submit/` | 提交签到 | Auth |
 | GET | `/records/` | 签到记录 | Auth |
 | GET | `/summary/` | 签到统计 | Admin |
+| GET | `/export/` | 导出活动全部签到记录（.xlsx） | Admin/EventAdmin |
 
 **创建会话**:
 ```json
@@ -1664,7 +1665,6 @@ git push origin main --tags
 - [ ] API 优化，减少带宽消耗
 - [ ] 活动报名时间段配置
 - [ ] 队员退出活动功能
-- [ ] 分作业、分签到导出表格
 - [ ] 输入列表框选择后清空输入
 - [ ] 返回时保留翻页位置
 
