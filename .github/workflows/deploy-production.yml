@@ -1,0 +1,47 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: tacos-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          : "${PROD_HOST:?PROD_HOST secret is required}"
+          : "${PROD_SSH_KEY:?PROD_SSH_KEY secret is required}"
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$PROD_SSH_KEY" > ~/.ssh/tacos_deploy_key
+          chmod 600 ~/.ssh/tacos_deploy_key
+          ssh-keyscan -H "$PROD_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          set -euo pipefail
+          : "${PROD_HOST:?PROD_HOST secret is required}"
+          : "${PROD_USER:?PROD_USER secret is required}"
+
+          ssh -i ~/.ssh/tacos_deploy_key \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$PROD_USER@$PROD_HOST" \
+            'cd /var/www/tacos && git fetch origin main && git reset --hard origin/main && bash scripts/deploy_production.sh --skip-git-sync'

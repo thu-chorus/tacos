@@ -137,6 +137,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # 默认初始密码
 DEFAULT_INITIAL_PASSWORD = "ChangeMe123!"
 
+# 超过 6 个月未登录队员停用任务的默认执行时间。
+STALE_ACTIVE_MEMBER_DEACTIVATION_CRON = {
+    "minute": 30,
+    "hour": 2,
+}
+
 # 定时任务配置
 CRONJOBS = [
     # 每月1号凌晨2点更新本月寿星称号

@@ -3,6 +3,7 @@
     <div class="pagination-center">
       <button
         class="btn-modern ghost xsm-btn pagination-btn"
+        type="button"
         :disabled="currentPage <= 1"
         @click="handlePrevPage"
         title="上一页"
@@ -17,6 +18,7 @@
       >
       <button
         class="btn-modern ghost xsm-btn pagination-btn"
+        type="button"
         :disabled="currentPage >= totalPages"
         @click="handleNextPage"
         title="下一页"
@@ -64,20 +66,20 @@ export default {
       default: 0
     }
   },
-  emits: ['update:currentPage', 'update:pageSize'],
+  emits: ['update:current-page', 'update:page-size'],
   methods: {
     handlePrevPage() {
       if (this.currentPage > 1) {
-        this.$emit('update:currentPage', this.currentPage - 1)
+        this.$emit('update:current-page', this.currentPage - 1)
       }
     },
     handleNextPage() {
       if (this.currentPage < this.totalPages) {
-        this.$emit('update:currentPage', this.currentPage + 1)
+        this.$emit('update:current-page', this.currentPage + 1)
       }
     },
     handleSizeChange(e) {
-      this.$emit('update:pageSize', Number(e.target.value))
+      this.$emit('update:page-size', Number(e.target.value))
     }
   }
 }

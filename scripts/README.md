@@ -14,6 +14,7 @@ scripts/
 ├── restore_tacos.sh                # 恢复脚本
 ├── cleanup_unused_assets.sh        # 资源清理脚本
 ├── format_code.sh                  # 代码格式化脚本
+├── deploy_production.sh            # 生产部署脚本
 ├── start_backend.sh                # 后端启动脚本
 └── start_frontend.sh               # 前端启动脚本
 ```
@@ -87,6 +88,29 @@ scripts/
 - **Celery Worker**: 异步处理耗时任务（PDF 水印生成、Excel 导出）
 - **Celery Beat**: 定时执行任务（每小时清理过期文件、每天停用超过 6 个月未登录的在队成员、每月更新寿星称号）
 - **Redis**: 消息队列，连接 Django 和 Celery
+
+### 🚢 部署脚本
+
+#### `deploy_production.sh`
+在生产服务器上部署 `origin/main`，供 GitHub Actions 自动部署和人工部署复用。
+
+**功能：**
+- 同步 `/var/www/tacos` 到 `origin/main`
+- 安装后端依赖
+- 执行数据库迁移和静态文件收集
+- 安装前端依赖并构建生产产物
+- 重启 `tacos`、`tacos-celery-worker`、`tacos-celery-beat` 并重载 Nginx
+
+**使用方法：**
+```bash
+# 在生产服务器执行完整部署
+./scripts/deploy_production.sh
+
+# 已由外层流程完成 git 同步时使用
+./scripts/deploy_production.sh --skip-git-sync
+```
+
+GitHub Actions 会在 `main` 有新提交时通过 SSH 执行该脚本。
 
 #### `start_frontend.sh`
 启动前端开发服务器

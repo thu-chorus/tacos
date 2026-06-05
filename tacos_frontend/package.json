@@ -1,6 +1,6 @@
 {
   "name": "tacos-frontend",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "description": "TaCOS (Tsinghua Chorus Online System) - Frontend Application",
   "license": "Apache-2.0",
   "type": "module",

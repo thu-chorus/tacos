@@ -19,6 +19,7 @@ production_env = environ.Env(
     ACCESS_TOKEN_LIFETIME_MINUTES=(int, 1440),  # 默认1天（1440分钟）
     REFRESH_TOKEN_LIFETIME_DAYS=(int, 10),  # 默认10天
     WATERMARK_FONT_PATH=(str, ""),
+    STALE_ACTIVE_MEMBER_DEACTIVATION_DAY_OF_MONTH=(str, ""),
 )
 
 # 读取生产环境配置文件
@@ -50,6 +51,16 @@ SECURE_SSL_REDIRECT = True
 if production_env("DATABASE_URL", default=None):
     DATABASES = {
         "default": production_env.db(),
+    }
+
+# 生产环境可通过环境变量把停用任务改为每月执行。
+stale_member_deactivation_day = production_env(
+    "STALE_ACTIVE_MEMBER_DEACTIVATION_DAY_OF_MONTH", default=""
+)
+if stale_member_deactivation_day:
+    STALE_ACTIVE_MEMBER_DEACTIVATION_CRON = {
+        **STALE_ACTIVE_MEMBER_DEACTIVATION_CRON,
+        "day_of_month": stale_member_deactivation_day,
     }
 
 # CORS 和主机名配置来自 base 中的环境变量

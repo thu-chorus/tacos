@@ -1,7 +1,7 @@
 # TaCOS 开发者文档
 
-**版本**: v2.2.0
-**最后更新**: 2026-06-01
+**版本**: v2.4.0
+**最后更新**: 2026-06-05
 
 ## 目录
 
@@ -1145,6 +1145,13 @@ python manage.py collectstatic --noinput
 sudo systemctl status tacos-celery-beat
 ```
 
+如需让 6 个月未登录队员停用任务每月执行一次，可在
+`tacos_backend/.env.production.local` 中设置：
+
+```bash
+STALE_ACTIVE_MEMBER_DEACTIVATION_DAY_OF_MONTH=1
+```
+
 #### 2. 前端部署
 
 ```bash
@@ -1157,6 +1164,26 @@ npm install
 npm run build
 
 # 3. 产物位于 dist/
+```
+
+#### 2.1 自动部署
+
+仓库包含 `.github/workflows/deploy-production.yml`。当 `main` 分支收到新提交时，
+GitHub Actions 会通过 SSH 登录生产服务器并执行：
+
+```bash
+cd /var/www/tacos
+git fetch origin main
+git reset --hard origin/main
+bash scripts/deploy_production.sh --skip-git-sync
+```
+
+需要在 GitHub 仓库中配置以下 Secrets：
+
+```text
+PROD_HOST=thuchorus.cc
+PROD_USER=root
+PROD_SSH_KEY=<生产服务器授权的私钥>
 ```
 
 #### 3. Systemd 服务配置
@@ -1473,6 +1500,25 @@ git push origin main --tags
 ```
 
 ## 十、更新日志
+
+### v2.4.0 (2026-06-05)
+
+- 增加活动全部签到记录导出能力，导出文件包含签到明细和场次汇总两张表。
+- 活动管理员和系统管理员可导出活动签到记录，导出内容包含已签到与未签到成员。
+- 更新签到 API 文档，补充 `/checkin/export/` 端点说明。
+
+### v2.3.1 (2026-06-04)
+
+- 修复分页状态变更触发筛选监听的问题，避免队员、乐谱和活动列表翻页被重置。
+- 统一分页组件事件命名，确保分页按钮与页面监听器保持一致。
+
+### v2.3.0 (2026-06-04)
+
+- 优化前端加载状态、缓存复用和并发请求，减少首屏闪烁和重复加载。
+- 增加活动队员导出能力，活动管理员无需加入活动也可管理活动。
+- 增加成员列表头像轻量预览，并优化成员列表展示密度。
+- 优化活动乐谱下拉选择排序，已选乐谱置顶。
+- 统一乐谱上传表单操作，将重置调整为取消返回。
 
 ### v2.2.0 (2026-05-28)
 
@@ -2450,6 +2496,6 @@ volumes:
   postgres_data:
 ```
 
-**文档最后更新**: 2026-05-28
-**文档版本**: v2.2.0
+**文档最后更新**: 2026-06-04
+**文档版本**: v2.4.0
 **维护者**: TaCOS开发团队

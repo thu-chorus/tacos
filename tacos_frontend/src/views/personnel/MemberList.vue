@@ -541,22 +541,21 @@ export default {
     // 监听 URL 状态变化重新加载数据（处理浏览器前进/后退）
     let isFirstLoad = true
     watch(
-      () => [
-        urlState.value.name,
-        urlState.value.userId,
-        urlState.value.voicePart,
-        urlState.value.tier,
-        urlState.value.status,
-        urlState.value.birthdayMonth,
-        urlState.value.department
+      [
+        () => urlState.value.name,
+        () => urlState.value.userId,
+        () => urlState.value.voicePart,
+        () => urlState.value.tier,
+        () => urlState.value.status,
+        () => urlState.value.birthdayMonth,
+        () => urlState.value.department
       ],
       () => {
         if (!isFirstLoad) {
           urlState.value = { ...urlState.value, page: 1 }
           loadData()
         }
-      },
-      { deep: true }
+      }
     )
 
     // 初始加载
