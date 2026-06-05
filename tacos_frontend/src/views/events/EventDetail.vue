@@ -288,6 +288,14 @@
             <i-lucide-plus class="btn-icon" />
             <span>创建签到</span>
           </button>
+          <button
+            class="btn-modern success sm-btn"
+            @click="handleExportCheckins"
+            :disabled="checkinsExporting"
+          >
+            <i-lucide-download class="btn-icon" />
+            <span>{{ checkinsExporting ? '导出中...' : '导出全部签到' }}</span>
+          </button>
         </div>
         <div class="table-wrapper" style="margin-top: 10px">
           <table class="data-table">
@@ -743,7 +751,8 @@ import {
   getEventSheets,
   getEventAdmins,
   getEventMembers,
-  exportEventMembers
+  exportEventMembers,
+  exportEventCheckins
 } from '@/api/events'
 import { getProfile } from '@/api/auth'
 import { initiateDownload, getDownloadTask } from '@/api/sheets'
@@ -789,6 +798,7 @@ export default {
     const checkin = ref({ active: false, session: null })
     const pendingAssignmentsCount = ref(0)
     const membersExporting = ref(false)
+    const checkinsExporting = ref(false)
     let detailRequestSeq = 0
     const dialogs = ref({
       checkins: { visible: false, loading: false, items: [] },
@@ -1091,6 +1101,25 @@ export default {
         console.error('导出活动队员失败', error)
       } finally {
         membersExporting.value = false
+      }
+    }
+
+    const handleExportCheckins = async () => {
+      checkinsExporting.value = true
+      notify.info('正在导出活动签到记录，请稍候...')
+      try {
+        const resp = await exportEventCheckins(currentId.value)
+        let filename = getFilenameFromContentDisposition(resp.headers?.['content-disposition'])
+        if (!filename || filename === 'download') {
+          filename = `活动签到_${event.value?.name || currentId.value}.xlsx`
+        }
+        downloadFile(resp.data, filename)
+        notify.success('导出成功')
+      } catch (error) {
+        notify.error('导出失败')
+        console.error('导出活动签到记录失败', error)
+      } finally {
+        checkinsExporting.value = false
       }
     }
 
@@ -1623,6 +1652,7 @@ export default {
       handleCurrentPage,
       isAdmin,
       membersExporting,
+      checkinsExporting,
       formatDate,
       formatDateTime,
       canEdit,
@@ -1641,6 +1671,7 @@ export default {
       openAdminList,
       openMemberList,
       handleExportMembers,
+      handleExportCheckins,
       openStartCheckin,
       doStartCheckin,
       doStopCheckin,

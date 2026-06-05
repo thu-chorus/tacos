@@ -113,6 +113,20 @@ class EventViewSet(EnvelopeModelViewSet):
             return "'" + text
         return text
 
+    @staticmethod
+    def _format_export_datetime(value: Any) -> str:
+        if not value:
+            return ""
+        return timezone.localtime(value).strftime("%Y-%m-%d %H:%M:%S")
+
+    @staticmethod
+    def _get_checkin_session_status(session: EventCheckinSession) -> str:
+        if session.is_active:
+            return "进行中"
+        if session.ended_at:
+            return "已结束"
+        return "未开始"
+
     def _build_event_members_export_response(
         self, event: Event, members: list[Member]
     ) -> HttpResponse:
@@ -182,6 +196,141 @@ class EventViewSet(EnvelopeModelViewSet):
         )
         response["Content-Disposition"] = (
             f'attachment; filename="event_members.xlsx"; '
+            f"filename*=UTF-8''{encoded_filename}"
+        )
+        return response
+
+    def _build_event_checkin_export_response(self, event: Event) -> HttpResponse:
+        from openpyxl import Workbook
+
+        sessions = list(event.checkin_sessions.all().order_by("started_at", "id"))
+        records = list(
+            EventCheckinRecord.objects.filter(session__event=event).select_related(
+                "member__user", "session"
+            )
+        )
+        records_by_session_member = {
+            (int(record.session_id), int(record.member_id)): record
+            for record in records
+        }
+        members = sort_members(
+            Member.objects.filter(
+                Q(events=event)
+                | Q(managed_events=event)
+                | Q(checkin_records__session__event=event)
+            )
+            .select_related("user")
+            .distinct()
+        )
+
+        wb = Workbook()
+        records_ws = wb.active
+        records_ws.title = "签到记录"
+        records_ws.append(
+            [
+                "签到场次",
+                "签到类型",
+                "场次状态",
+                "开始时间",
+                "结束时间",
+                "学号",
+                "姓名",
+                "声部",
+                "梯队",
+                "签到情况",
+                "签到时间",
+                "纬度",
+                "经度",
+            ]
+        )
+
+        for session in sessions:
+            session_status = self._get_checkin_session_status(session)
+            for member in members:
+                record = records_by_session_member.get(
+                    (int(session.id), int(member.id))
+                )
+                user = getattr(member, "user", None)
+                row = [
+                    session.name or f"签到{session.id}",
+                    session.get_type_display(),
+                    session_status,
+                    self._format_export_datetime(session.started_at),
+                    self._format_export_datetime(session.ended_at),
+                    getattr(user, "user_id", ""),
+                    getattr(member, "name", ""),
+                    getattr(member, "voice_part", ""),
+                    getattr(member, "tier", ""),
+                    "已签到" if record else "未签到",
+                    self._format_export_datetime(getattr(record, "checked_at", None)),
+                    getattr(record, "lat", ""),
+                    getattr(record, "lng", ""),
+                ]
+                records_ws.append([self._safe_export_text(value) for value in row])
+                for cell in records_ws[records_ws.max_row]:
+                    cell.number_format = "@"
+                    cell.data_type = "s"
+
+        summary_ws = wb.create_sheet("签到场次")
+        summary_ws.append(
+            [
+                "签到场次",
+                "签到类型",
+                "场次状态",
+                "开始时间",
+                "结束时间",
+                "应签到人数",
+                "已签到人数",
+                "未签到人数",
+            ]
+        )
+        total_members = len(members)
+        for session in sessions:
+            checked_count = sum(
+                1
+                for member in members
+                if (int(session.id), int(member.id)) in records_by_session_member
+            )
+            row = [
+                session.name or f"签到{session.id}",
+                session.get_type_display(),
+                self._get_checkin_session_status(session),
+                self._format_export_datetime(session.started_at),
+                self._format_export_datetime(session.ended_at),
+                total_members,
+                checked_count,
+                total_members - checked_count,
+            ]
+            summary_ws.append([self._safe_export_text(value) for value in row])
+            for cell in summary_ws[summary_ws.max_row]:
+                cell.number_format = "@"
+                cell.data_type = "s"
+
+        records_widths = [20, 14, 10, 20, 20, 16, 12, 8, 8, 10, 20, 14, 14]
+        summary_widths = [20, 14, 10, 20, 20, 12, 12, 12]
+        for ws, widths in (
+            (records_ws, records_widths),
+            (summary_ws, summary_widths),
+        ):
+            ws.freeze_panes = "A2"
+            for index, width in enumerate(widths, start=1):
+                ws.column_dimensions[
+                    ws.cell(row=1, column=index).column_letter
+                ].width = width
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        filename = (
+            f"活动签到_{event.name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        )
+        encoded_filename = quote(filename, safe="")
+        response = HttpResponse(
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="event_checkins.xlsx"; '
             f"filename*=UTF-8''{encoded_filename}"
         )
         return response
@@ -730,6 +879,21 @@ class EventViewSet(EnvelopeModelViewSet):
                 "count": len(results),
             }
         )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[IsAuthenticated],
+        url_path="checkin/export",
+    )
+    def export_checkins(self, request, public_id=None):
+        """导出活动全部签到记录，限系统管理员和活动管理员。"""
+        event: Event = self.get_object()
+        user = request.user
+        if not (self._is_site_admin(user) or self._is_event_admin(event, user)):
+            return Response(envelope_error(403, "无权限导出签到记录", {}), status=403)
+
+        return self._build_event_checkin_export_response(event)
 
     @action(
         detail=True,
