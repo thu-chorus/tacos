@@ -10,7 +10,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
-from apps.events.models import Event
+from apps.events.models import Event, EventCheckinRecord, EventCheckinSession
 from apps.personnel.models import Member
 
 
@@ -245,6 +245,66 @@ class EventBasicApiTest(TestCase):
 
         self._auth("m10002", "Pass1002")
         response = self.client.get(f"/api/v1/events/{self.event_id}/members/export/")
+
+        self.assertEqual(response.status_code, 403, response.json())
+
+    def test_site_admin_can_export_event_checkins(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+        session = EventCheckinSession.objects.create(
+            event=event,
+            created_by=self.site_admin,
+            name="排练签到",
+            type="NONE",
+            is_active=False,
+            started_at=timezone.now(),
+            ended_at=timezone.now(),
+        )
+        EventCheckinRecord.objects.create(session=session, member=self.member2)
+
+        self._auth("admin001", "AdminPass123")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/checkin/export/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            response["Content-Type"],
+        )
+        workbook = load_workbook(BytesIO(response.content))
+        self.assertEqual(workbook.sheetnames, ["签到记录", "签到场次"])
+        records_sheet = workbook["签到记录"]
+        rows = list(records_sheet.iter_rows(values_only=True))
+        self.assertEqual(rows[0][0], "签到场次")
+        exported_status_by_user_id = {row[5]: row[9] for row in rows[1:]}
+        self.assertEqual(exported_status_by_user_id["m10002"], "已签到")
+        self.assertEqual(exported_status_by_user_id["m10001"], "未签到")
+
+        summary_sheet = workbook["签到场次"]
+        self.assertEqual(summary_sheet["A2"].value, "排练签到")
+        self.assertEqual(summary_sheet["F2"].value, "2")
+        self.assertEqual(summary_sheet["G2"].value, "1")
+        self.assertEqual(summary_sheet["H2"].value, "1")
+
+    def test_event_admin_can_export_event_checkins_without_joining(self):
+        event = Event.objects.get(public_id=self.event_id)
+        EventCheckinSession.objects.create(
+            event=event,
+            created_by=self.site_admin,
+            name="排练签到",
+            type="NONE",
+        )
+
+        self._auth("m10001", "Pass1001")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/checkin/export/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_participant_cannot_export_event_checkins(self):
+        event = Event.objects.get(public_id=self.event_id)
+        event.participants.add(self.member2)
+
+        self._auth("m10002", "Pass1002")
+        response = self.client.get(f"/api/v1/events/{self.event_id}/checkin/export/")
 
         self.assertEqual(response.status_code, 403, response.json())
 
